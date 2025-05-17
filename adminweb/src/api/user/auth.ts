@@ -4,18 +4,20 @@ import request from '@/utils/request'
  * 用户登录
  * @param username 用户名
  * @param password 密码
- * @param code 验证码(可选)
+ * @param captchaCode 验证码(可选)
  * @param captchaId 验证码ID(可选)
  * @returns 用户信息和token
  */
-export function login(username: string, password: string, code?: string, captchaId?: string) {
+// 登录 API
+export function login(username: string, password: string, captchaCode?: string, captchaId?: string) {
     return request({
         url: '/user/user-auth/login',
         method: 'post',
         data: { username, password },
-        params: { code, captchaId }
-    })
+        params: { code: captchaCode, captchaId }  // 在 params 中传递 captchaCode 和 captchaId
+    });
 }
+
 
 /**
  * 用户注册
@@ -49,13 +51,15 @@ export function logout() {
     })
 }
 
+
+
 /**
  * 获取验证码
- * @returns 验证码信息(base64格式)
+ * @returns 验证码信息 (包括验证码的图片、过期时间等)
  */
 export function getCaptcha() {
     return request({
         url: '/user/user-auth/captcha',
-        method: 'get'
-    })
+        method: 'get',
+    });
 }
