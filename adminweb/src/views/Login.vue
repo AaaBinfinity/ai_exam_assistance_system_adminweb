@@ -266,7 +266,8 @@ import { ElMessage } from "element-plus";
 import { ref, reactive, onMounted } from "vue";
 import { login } from "@/api/user/auth";
 import Captcha from "@/components/common/Captcha.vue";
-import axios from "axios";
+import { setToken, setUserInfo } from '@/utils/auth';  // 引入封装好的工具
+
 
 // 数据与响应式状态
 const loginFormRef = ref<FormInstance>();
@@ -301,24 +302,26 @@ const handleCaptchaIdChange = (newCaptchaId: string) => {
 loginForm.captchaId = newCaptchaId; // 更新 captchaId
 };
 
-// 登录请求
+
+
 const loginRequest = async () => {
   loading.value = true;
   try {
-    const formData = new FormData();
-    formData.append("username", loginForm.username);
-    formData.append("password", loginForm.password);
-    formData.append("captchaCode", loginForm.captchaCode);
-    formData.append("captchaId", loginForm.captchaId);
+    const loginData = {
+      username: loginForm.username,
+      password: loginForm.password,
+      captchaCode: loginForm.captchaCode,
+      captchaId: loginForm.captchaId,
+    };
 
-    const response = await axios.post('http://localhost:9001/user/user-auth/login', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',  // 注意这里使用 'multipart/form-data'
-      },
-    });
+    const response = await login(loginData); // 使用封装好的 API
 
     if (response.data && response.data.token) {
-      await router.push("/"); // 登录成功后跳转到首页
+      // 存储 token 和用户信息（推荐使用 utils/auth.ts 来管理 token 和用户信息）
+      setToken(response.data.token);  // 使用 setToken 存储 token
+      setUserInfo(response.data);     // 使用 setUserInfo 存储用户信息
+
+      window.location.href = '/';
       ElMessage.success("登录成功");
     } else {
       ElMessage.error("登录失败，用户异常");

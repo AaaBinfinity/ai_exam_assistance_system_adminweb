@@ -4,7 +4,8 @@ import { FormInstance } from "element-plus";
 import { ElMessage } from "element-plus";
 import { ref, reactive, onMounted } from "vue";
 import Captcha from "@/components/common/Captcha.vue";
-import {register} from "@/api/user/auth"; // 引入验证码组件
+import {register} from "@/api/user/auth";
+import {setToken, setUserInfo} from "@/utils/auth"; // 引入验证码组件
 
 // 数据与响应式状态
 const registerFormRef = ref<FormInstance>();
@@ -60,20 +61,49 @@ const registerRequest = async () => {
           username: registerForm.username,
           password: registerForm.password,
           email: registerForm.email,
-          telephone: registerForm.telephone, // 手机号字段
+          telephone: registerForm.telephone,
         },
-        registerForm.captchaCode, // 验证码
-        registerForm.captchaId    // captchaId
+        registerForm.captchaCode,
+        registerForm.captchaId
     );
 
     if (response.data && response.data.token) {
-      router.push("/"); // 注册成功后跳转到首页
+      // 存储 token
+      setToken(response.data.token);
+
+      // 存储用户信息（根据实际接口返回调整）
+      setUserInfo({
+        username: registerForm.username,
+        email: registerForm.email,
+        telephone: registerForm.telephone,
+        // 其他可能返回的用户信息
+        ...(response.data.userInfo || {})
+      });
+
+      // 注册成功后跳转到首页
+      await router.push("/");
       ElMessage.success("注册成功");
+
+      // 可选：刷新页面以确保应用状态更新
+      window.location.reload();
     } else {
       ElMessage.error("注册失败，用户信息异常");
     }
   } catch (error) {
-    ElMessage.error("注册失败，请检查信息并重试！");
+    console.error("注册错误:", error);
+
+    // 更详细的错误处理
+    if (error.response) {
+      if (error.response.status === 400) {
+        ElMessage.error("注册失败: " + (error.response.data.message || "请求参数错误"));
+      } else if (error.response.status === 409) {
+        ElMessage.error("用户名或邮箱已被注册");
+      } else {
+        ElMessage.error("注册失败: " + (error.response.data.message || "服务器错误"));
+      }
+    } else {
+      ElMessage.error("注册失败，请检查网络连接并重试！");
+    }
   } finally {
     loading.value = false;
   }

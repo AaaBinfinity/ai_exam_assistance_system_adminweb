@@ -1,17 +1,42 @@
-import request from '@/utils/request'
+import request from '@/utils/request';
 
 /**
- * 用户登录
- * @param loginData 登录所需的字段
+ * 用户登出
+ * @returns 登出结果
+ */
+export function logout() {
+    return request({
+        url: '/user/user-auth/logout',
+        method: 'get'
+    });
+}
+/**
+ * 用户登录（使用 multipart/form-data）
+ * @param loginData 登录字段
  * @returns 登录成功的用户信息
  */
 export function login(loginData: { username: string, password: string, captchaCode?: string, captchaId?: string }) {
+    const formData = new FormData();
+    formData.append('username', loginData.username);
+    formData.append('password', loginData.password);
+    if (loginData.captchaCode) {
+        formData.append('code', loginData.captchaCode);
+    }
+    if (loginData.captchaId) {
+        formData.append('captchaId', loginData.captchaId);
+    }
+
     return request({
         url: '/user/user-auth/login',
         method: 'post',
-        data: loginData,  // 直接发送 JSON 数据
+        data: formData,
+        headers: {
+            'Content-Type': 'multipart/form-data', // 可省略，浏览器会自动加
+        },
     });
 }
+
+
 /**
  * 用户注册
  * @param userInfo 用户注册信息
@@ -32,19 +57,6 @@ export function register(userInfo: {
         params: { code, captchaId }  // 查询参数
     });
 }
-
-/**
- * 用户登出
- * @returns 登出结果
- */
-export function logout() {
-    return request({
-        url: '/user/user-auth/logout',
-        method: 'get'
-    })
-}
-
-
 
 /**
  * 获取验证码
