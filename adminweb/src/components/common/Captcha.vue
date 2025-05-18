@@ -1,123 +1,145 @@
 <template>
-  <div class="captcha-container">
-    <el-image
-        :src="captchaSrc"
-        fit="contain"
-        class="captcha-image"
-        @click="reloadCaptcha"
-    />
-    <el-input
-        v-model="captchaCode"
-        :placeholder="placeholderText"
-        clearable
-        @change="handleInputChange"
-        @clear="handleInputClear"
-        class="captcha-input"
-    />
-    <el-button
-        v-if="showRefreshButton"
-        type="text"
-        @click="reloadCaptcha"
-        class="refresh-button"
-    >
-      <el-icon><Refresh /></el-icon>
-    </el-button>
-  </div>
+  <el-form :model="form" :rules="rules" ref="captchaForm" label-width="100px">
+    <div class="captcha-container">
+      <!-- 验证码图片 -->
+      <el-image
+          :src="captchaSrc"
+          fit="contain"
+          class="captcha-image"
+          @click="reloadCaptcha"
+      />
+
+      <div class="input-wrapper">
+        <!-- 验证码输入框 -->
+        <el-form-item prop="captchaCode">
+          <el-input
+              v-model="form.captchaCode"
+              :placeholder="placeholderText"
+              clearable
+              @change="handleInputChange"
+              @clear="handleInputClear"
+              class="captcha-input"
+          />
+        </el-form-item>
+      </div>
+
+      <!-- 刷新按钮 -->
+      <el-button
+          v-if="showRefreshButton"
+          type="text"
+          @click="reloadCaptcha"
+          class="refresh-button"
+      >
+        <el-icon><Refresh /></el-icon>
+      </el-button>
+    </div>
+  </el-form>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed, watch } from 'vue'
+import { ref, computed, onMounted, defineProps, defineEmits, watch } from 'vue'
 import { getCaptcha } from '@/api/user/auth'
 import { Refresh } from '@element-plus/icons-vue'
 
-// 组件props
+// Props 定义
 const props = defineProps({
-  modelValue: {
-    type: String,
-    default: ''
-  },
-  placeholder: {
-    type: String,
-    default: '请输入验证码'
-  },
-  showRefreshButton: {
-    type: Boolean,
-    default: true
-  }
+  modelValue: { type: String, default: '' },
+  captchaId: { type: String, default: '' },
+  placeholder: { type: String, default: '请输入验证码' },
+  showRefreshButton: { type: Boolean, default: true }
 })
 
-// 组件emits
-const emit = defineEmits(['update:modelValue', 'change', 'update:captchaData'])
+// Emits 定义
+const emit = defineEmits(['update:modelValue', 'change', 'update:captchaId'])
 
 // 响应式数据
 const captchaSrc = ref('')
-const captchaCode = ref(props.modelValue)
-const captchaId = ref('')
+const captchaId = ref(props.captchaId)
 const isLoading = ref(false)
+const captchaForm = ref()
 
-// 计算属性
+// 表单数据
+const form = ref({
+  captchaCode: props.modelValue
+})
+
+// 验证规则 - 与登录表单保持一致
+const rules = {
+  captchaCode: [
+    { required: true, message: '请输入验证码', trigger: 'blur' },
+    { min: 2, max: 2, message: '验证码必须为 2 个字符', trigger: 'blur' }
+  ]
+}
+
+// 计算 placeholder 文本
 const placeholderText = computed(() => {
   return isLoading.value ? '正在加载验证码...' : props.placeholder
 })
 
+// 帮助函数：更新父组件的值
+const updateParent = (modelValue: string, captchaIdValue: string) => {
+  emit('update:modelValue', modelValue)
+  emit('change', modelValue)
+  emit('update:captchaId', captchaIdValue)
+}
+
 // 加载验证码
 const loadCaptcha = async () => {
-  isLoading.value = true;
+  isLoading.value = true
   try {
-    const response = await getCaptcha();
+    const response = await getCaptcha()
     if (response.data?.imageBase64Data) {
-      captchaSrc.value = response.data.imageBase64Data;
-      captchaId.value = response.data.captchaId || '';
-      // 加载成功后立即通知父组件captchaId
-      emit('update:captchaId', captchaId.value);
+      captchaSrc.value = response.data.imageBase64Data
+      captchaId.value = response.data.captchaId || ''
+      updateParent('', captchaId.value) // 重置模型值
     }
   } catch (error) {
-    console.error('获取验证码失败:', error);
-    captchaSrc.value = '';
+    console.error('获取验证码失败:', error)
+    captchaSrc.value = '' // 如果获取失败，清空验证码
   } finally {
-    isLoading.value = false;
+    isLoading.value = false
   }
-};
+}
 
 // 重新加载验证码
 const reloadCaptcha = () => {
   if (isLoading.value) return
-  console.log('重新加载验证码...')  // 调试：开始重新加载验证码
-  captchaCode.value = '' // 清空输入框
-  emit('update:modelValue', '') // 通知父组件值已清空
+  console.log('重新加载验证码...')
+  form.value.captchaCode = '' // 重置输入框
+  updateParent('', '') // 重置模型值
   loadCaptcha()
 }
 
-// 输入变化处理
+// 输入框内容变化处理
 const handleInputChange = (value: string) => {
-  emit('update:modelValue', value);
-  emit('change', value);
-  // 单独emit captchaId更新事件
-  emit('update:captchaId', captchaId.value);
-};
+  updateParent(value, captchaId.value)
+}
 
-// 清空输入处理
+// 输入框清空处理
 const handleInputClear = () => {
-  emit('update:modelValue', '');
-  emit('change', '');
-  // 单独emit captchaId更新事件
-  emit('update:captchaId', captchaId.value);
-};
+  updateParent('', captchaId.value)
+}
 
-// 监听props变化
-watch(() => props.modelValue, (newVal) => {
-  if (newVal !== captchaCode.value) {
-    console.log('父组件传入的新值与当前值不一致，更新 captchaCode');  // 调试：检测 props 变化
-    captchaCode.value = newVal
-  }
+// 验证表单
+const validate = () => {
+  return captchaForm.value.validate()
+}
+
+// 监听输入框变化，自动更新父组件的值
+watch(() => form.value.captchaCode, (newVal) => {
+  updateParent(newVal, captchaId.value)
 })
 
-// 初始化加载验证码
+// 组件挂载时加载验证码
 onMounted(() => {
-  console.log('组件挂载完成，开始加载验证码');  // 调试：组件挂载后开始加载验证码
+  console.log('组件挂载完成，开始加载验证码')
   loadCaptcha()
 })
 
+// 暴露 validate 方法
+defineExpose({
+  validate
+})
 </script>
 
 <style scoped>
@@ -136,6 +158,12 @@ onMounted(() => {
   margin-right: 10px;
 }
 
+.input-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
 .captcha-input {
   flex: 1;
   min-width: 150px;
@@ -144,5 +172,9 @@ onMounted(() => {
 .refresh-button {
   margin-left: 8px;
   color: var(--el-color-primary);
+}
+
+:deep(.el-form-item) {
+  margin-bottom: 0;
 }
 </style>

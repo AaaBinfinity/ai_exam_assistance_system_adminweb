@@ -3,18 +3,18 @@
     <!-- 左侧背景区域 -->
     <div class="login-background">
       <div class="background-wrapper">
-        <!-- 添加简单的装饰图形 -->
+
+        <!-- 动画背景 -->
         <div class="animated-background">
+          <div class="logo-container">
+            <img src="@/assets/images/AI考学宝.png" alt="AI考学宝 Logo" />
+          </div>
           <div class="gradient-circle"></div>
           <div class="geometric-shapes">
             <div class="shape" v-for="n in 5" :key="n"></div>
           </div>
         </div>
 
-        <!-- Logo和标题区域 -->
-        <div class="brand-content">
-          <p class="brand-description"><br><br></p>
-        </div>
       </div>
     </div>
 
@@ -61,7 +61,8 @@
 
             <div class="login-options">
               <el-checkbox v-model="rememberMe">记住我</el-checkbox>
-              <a href="#" class="forget-password">忘记密码？</a>
+              <router-link to="/register" class="forget-password">没有账号？去注册</router-link>
+
             </div>
 
             <el-button
@@ -302,32 +303,33 @@ loginForm.captchaId = newCaptchaId; // 更新 captchaId
 
 // 登录请求
 const loginRequest = async () => {
-loading.value = true;
-try {
-const formData = new FormData();
-formData.append('username', loginForm.username);
-formData.append('password', loginForm.password);
-formData.append('captchaCode', loginForm.captchaCode);
-formData.append('captchaId', loginForm.captchaId);
+  loading.value = true;
+  try {
+    const formData = new FormData();
+    formData.append("username", loginForm.username);
+    formData.append("password", loginForm.password);
+    formData.append("captchaCode", loginForm.captchaCode);
+    formData.append("captchaId", loginForm.captchaId);
 
-const response = await axios.post('http://localhost:9001/user/user-auth/login', formData, {
-headers: {
-'Content-Type': 'multipart/form-data',
-},
-});
+    const response = await axios.post('http://localhost:9001/user/user-auth/login', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',  // 注意这里使用 'multipart/form-data'
+      },
+    });
 
-if (response.data && response.data.token) {
-router.push("/"); // 登录成功后跳转到首页
-ElMessage.success("登录成功");
-} else {
-ElMessage.error("登录失败，用户异常");
-}
-} catch (error) {
-ElMessage.error("登录失败，请检查用户名和密码！");
-} finally {
-loading.value = false;
-}
+    if (response.data && response.data.token) {
+      await router.push("/"); // 登录成功后跳转到首页
+      ElMessage.success("登录成功");
+    } else {
+      ElMessage.error("登录失败，用户异常");
+    }
+  } catch (error) {
+    ElMessage.error("登录失败，请检查用户名和密码！");
+  } finally {
+    loading.value = false;
+  }
 };
+
 
 // 处理登录逻辑
 const handleLogin = async () => {

@@ -9,7 +9,12 @@ const routes: RouteRecordRaw[] = [
     {
         path: '/login',
         name: 'Login',
-        component: () => import('@/views/login.vue'),  // 懒加载组件
+        component: () => import('@/views/Login.vue'),  // 懒加载组件
+    },
+    {
+        path: '/register',
+        name: 'register',
+        component: () => import('@/views/Register.vue'),  // 懒加载组件
     },
 
 ];
