@@ -36,7 +36,7 @@ export function getPermissions(page?: number, size?: number) {
  */
 export function assignRoles(userId: string, roleIds: string[]) {
     return request({
-        url: `/user/role-manager/role?userId=${userId}`,
+        url: `/user/role-manager/role/${userId}`,
         method: 'put',
         data: roleIds
     })
@@ -50,7 +50,7 @@ export function assignRoles(userId: string, roleIds: string[]) {
  */
 export function removeRoles(userId: string, roleIds: string[]) {
     return request({
-        url: `/user/role-manager/role?userId=${userId}`,
+        url: `/user/role-manager/role/${userId}`,
         method: 'delete',
         data: roleIds
     })

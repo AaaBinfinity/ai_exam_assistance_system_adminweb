@@ -166,7 +166,7 @@ defineExpose({
 
 .captcha-input {
   flex: 1;
-  min-width: 150px;
+  width: 299px;
 }
 
 .refresh-button {
@@ -174,7 +174,5 @@ defineExpose({
   color: var(--el-color-primary);
 }
 
-:deep(.el-form-item) {
-  margin-bottom: 0;
-}
+
 </style>

@@ -42,7 +42,7 @@ const rules = {
     { pattern: /^1[3-9]\d{9}$/, message: "请输入有效的手机号", trigger: "blur" }, // 手机号验证
   ],
   studentId: [
-    { required: function() { return registerForm.isStudent; }, message: "请输入学号", trigger: "blur" },
+    { required: function() { return registerForm.isStudent; }, message: "请输入工号", trigger: "blur" },
   ],
 };
 
@@ -51,11 +51,12 @@ const handleCaptchaIdChange = (newCaptchaId: string) => {
   registerForm.captchaId = newCaptchaId; // 更新 captchaId
 };
 
-// 注册请求
+
+
+
 const registerRequest = async () => {
   loading.value = true;
   try {
-    // 调用封装好的注册接口
     const response = await register(
         {
           username: registerForm.username,
@@ -68,46 +69,46 @@ const registerRequest = async () => {
     );
 
     if (response.data && response.data.token) {
-      // 存储 token
       setToken(response.data.token);
-
-      // 存储用户信息（根据实际接口返回调整）
       setUserInfo({
         username: registerForm.username,
         email: registerForm.email,
         telephone: registerForm.telephone,
-        // 其他可能返回的用户信息
-        ...(response.data.userInfo || {})
+        ...(response.data.userInfo || {}),
       });
-
-      // 注册成功后跳转到首页
-      await router.push("/");
+      setTimeout(() => {
+        router.push('/'); // 使用 Vue Router 跳转
+      }, 800); // 延迟 800ms 跳转
       ElMessage.success("注册成功");
 
-      // 可选：刷新页面以确保应用状态更新
-      window.location.reload();
+      // 延迟跳转，确保提示显示流畅
+
     } else {
       ElMessage.error("注册失败，用户信息异常");
     }
   } catch (error) {
     console.error("注册错误:", error);
-
-    // 更详细的错误处理
-    if (error.response) {
-      if (error.response.status === 400) {
-        ElMessage.error("注册失败: " + (error.response.data.message || "请求参数错误"));
-      } else if (error.response.status === 409) {
-        ElMessage.error("用户名或邮箱已被注册");
-      } else {
-        ElMessage.error("注册失败: " + (error.response.data.message || "服务器错误"));
-      }
-    } else {
-      ElMessage.error("注册失败，请检查网络连接并重试！");
-    }
+    handleRegisterError(error);
   } finally {
     loading.value = false;
   }
 };
+
+// 处理错误
+const handleRegisterError = (error: any) => {
+  if (error.response) {
+    if (error.response.status === 400) {
+      ElMessage.error("注册失败: " + (error.response.data.message || "请求参数错误"));
+    } else if (error.response.status === 409) {
+      ElMessage.error("用户名或邮箱已被注册");
+    } else {
+      ElMessage.error("注册失败: " + (error.response.data.message || "服务器错误"));
+    }
+  } else {
+    ElMessage.error("注册失败，请检查网络连接并重试！");
+  }
+};
+
 
 // 处理注册逻辑
 const handleRegister = async () => {
@@ -118,6 +119,8 @@ const handleRegister = async () => {
         return;
       }
       await registerRequest(); // 验证通过后，进行注册
+    } else {
+      ElMessage.error("请检查表单填写是否完整");
     }
   });
 };
@@ -253,7 +256,7 @@ onMounted(() => {
 <style scoped lang="scss">
 .register-page {
   display: flex;
-  height: 100vh;
+  min-height: 90vh; // 使用min-height替代height
   background-color: #f0f8ff; /* 浅蓝色背景 */
   font-family: 'Arial', sans-serif;
   color: #333;

@@ -1,12 +1,15 @@
-
+// main.ts
+import { createApp } from 'vue';
 import App from './App.vue';
-import router from './router'; // 导入路由
+import router from './router';
 import ElementPlus from 'element-plus';
 import 'element-plus/dist/index.css';
-import { createApp } from 'vue';
-import { ElImage, ElInput } from 'element-plus';
-const app = createApp(App);
-app.use(ElementPlus);
+import 'element-plus/theme-chalk/el-message.css';
 
-app.use(router);  // 使用 Vue Router
+const app = createApp(App);
+
+// 注册插件（顺序很重要）
+app.use(ElementPlus);
+app.use(router);
+
 app.mount('#app');

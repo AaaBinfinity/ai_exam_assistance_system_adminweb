@@ -93,12 +93,14 @@
 <style scoped lang="scss">
 .login-container {
   display: flex;
-  height: 100vh;
-  background-color: #f0f8ff; /* 浅蓝色背景 */
-  font-family: 'Arial', sans-serif;
-  color: #333;
-}
+  min-height: 90vh; // 使用min-height替代height
+  overflow: hidden;
 
+  .login-background,
+  .login-form {
+    overflow: auto;
+  }
+}
 .login-background {
   flex: 1;
   background: linear-gradient(135deg, #a0c4ff, #f0f8ff); /* 渐变浅蓝色背景 */
@@ -255,6 +257,7 @@
 .footer a:hover {
   text-decoration: underline;
 }
+
 </style>
 
 
@@ -281,9 +284,6 @@ password: "",
 rememberMe: false,
 captchaCode: "",
 captchaId: "",  // 添加 captchaId
-source: "ADMIN",
-nonceStr: "",
-value: "",
 });
 
 const rules = {
@@ -303,7 +303,6 @@ loginForm.captchaId = newCaptchaId; // 更新 captchaId
 };
 
 
-
 const loginRequest = async () => {
   loading.value = true;
   try {
@@ -314,15 +313,26 @@ const loginRequest = async () => {
       captchaId: loginForm.captchaId,
     };
 
-    const response = await login(loginData); // 使用封装好的 API
+    const response = await login(loginData);
 
     if (response.data && response.data.token) {
-      // 存储 token 和用户信息（推荐使用 utils/auth.ts 来管理 token 和用户信息）
-      setToken(response.data.token);  // 使用 setToken 存储 token
-      setUserInfo(response.data);     // 使用 setUserInfo 存储用户信息
+      const roles = response.data.roles || [];
 
-      window.location.href = '/';
+      // 这里判断是否包含 ADMIN 权限
+      if (!roles.includes("ADMIN")) {
+        ElMessage.error("无权限访问：需要 ADMIN 权限");
+        return;
+      }
+
+      // 通过校验后再设置 token 和用户信息
+      setToken(response.data.token);
+      setUserInfo(response.data);
+
       ElMessage.success("登录成功");
+
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 500);
     } else {
       ElMessage.error("登录失败，用户异常");
     }
@@ -332,6 +342,7 @@ const loginRequest = async () => {
     loading.value = false;
   }
 };
+
 
 
 // 处理登录逻辑

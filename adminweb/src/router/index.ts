@@ -11,13 +11,26 @@ const routes: RouteRecordRaw[] = [
     {
         path: '/login',
         name: 'Login',
+        meta: { hideNavbar: true },
         component: () => import('@/views/Login.vue'),  // 懒加载组件
     },
     {
         path: '/register',
         name: 'Register',
+        meta: { hideNavbar: true },
         component: () => import('@/views/Register.vue'),  // 懒加载组件
     },
+    {
+        path: '/profile',
+        name: 'Profile',
+        component: () => import('@/views/Profile.vue'),
+    },
+    {
+        path: '/users',
+        name: 'Users',
+        component: () => import('@/views/UserManager.vue'),
+    }
+    ,
 ];
 
 const router = createRouter({
