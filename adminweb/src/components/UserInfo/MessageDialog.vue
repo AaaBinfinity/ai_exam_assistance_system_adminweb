@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { ElMessage } from 'element-plus';
 import {
   getInboxMessages,
@@ -7,13 +7,14 @@ import {
   sendMessage,
   markAsRead
 } from '@/api/user/messages';
+import dayjs from 'dayjs';
 
 const props = defineProps({
   modelValue: Boolean
 });
 const emit = defineEmits(['update:modelValue']);
 
-const activeTab = ref<'inbox' | 'sent'>('inbox');
+const activeTab = ref<'inbox' | 'sent' | 'send'>('inbox');
 const messages = ref<any[]>([]);
 const loading = ref(false);
 const page = ref(1);
@@ -24,14 +25,29 @@ const total = ref(0);
 const receiverId = ref('');
 const content = ref('');
 
+// 时间格式化函数
+const formatTime = (time: string | null) => {
+  return time ? dayjs(time).format('YYYY-MM-DD HH:mm:ss') : '暂无时间';
+};
+const visible = ref(props.modelValue);
+watch(() => props.modelValue, val => visible.value = val);
+watch(visible, val => emit('update:modelValue', val));
+
 const fetchMessages = async () => {
   loading.value = true;
   try {
     const res = activeTab.value === 'inbox'
-        ? await getInboxMessages(page.value, size.value)
-        : await getSentMessages(page.value, size.value);
-    messages.value = res.data?.records || [];
-    total.value = res.data?.total || 0;
+        ? await getInboxMessages(page.value - 1, size.value)
+        : await getSentMessages(page.value - 1, size.value);
+
+    console.log('完整响应', res);
+
+    // 原有逻辑
+    messages.value = res.data?.content || [];
+    total.value = res.data?.totalElements || 0;
+
+    console.log('messages', messages.value);
+    console.log('total', total.value);
   } catch (err) {
     ElMessage.error('获取消息失败');
   } finally {
@@ -45,7 +61,7 @@ const markMessageAsRead = async (id: string) => {
   try {
     await markAsRead(id);
     messages.value = messages.value.map(msg =>
-        msg.id === id ? { ...msg, read: true } : msg
+        msg.id === id ? { ...msg, isRead: true } : msg
     );
   } catch {
     ElMessage.error('标记为已读失败');
@@ -70,22 +86,23 @@ const handleSend = async () => {
 };
 
 watch(() => props.modelValue, val => {
-  if (val) fetchMessages();
+  if (val && activeTab.value !== 'send') fetchMessages();
 });
 watch(activeTab, () => {
   page.value = 1;
-  fetchMessages();
+  if (activeTab.value !== 'send') fetchMessages();
 });
 </script>
 
 <template>
   <el-drawer
-      v-model="props.modelValue"
+      v-model="visible"
       title="消息中心"
       size="40%"
       direction="rtl"
       @close="handleClose"
   >
+
     <el-tabs v-model="activeTab">
       <el-tab-pane label="收件箱" name="inbox" />
       <el-tab-pane label="已发送" name="sent" />
@@ -98,22 +115,22 @@ watch(activeTab, () => {
           <el-timeline-item
               v-for="msg in messages"
               :key="msg.id"
-              :timestamp="msg.sendTime"
-              :type="activeTab === 'inbox' && !msg.read ? 'primary' : 'info'"
+              :timestamp="formatTime(msg.createTime)"
+              :type="activeTab === 'inbox' && !msg.isRead ? 'primary' : 'info'"
               placement="top"
           >
             <div class="message-item">
               <div class="message-header">
-                <strong v-if="activeTab === 'inbox'">{{ msg.senderName }}</strong>
-                <strong v-else>To: {{ msg.receiverName }}</strong>
-                <el-tag size="small" type="success" v-if="activeTab === 'inbox' && !msg.read">未读</el-tag>
+                <strong v-if="activeTab === 'inbox'">{{ msg.senderId }}</strong>
+                <strong v-else>To: {{ msg.receiverId }}</strong>
+                <el-tag size="small" type="success" v-if="activeTab === 'inbox' && !msg.isRead">未读</el-tag>
               </div>
               <p>{{ msg.content }}</p>
               <el-button
                   size="small"
                   type="text"
                   @click="markMessageAsRead(msg.id)"
-                  v-if="activeTab === 'inbox' && !msg.read"
+                  v-if="activeTab === 'inbox' && !msg.isRead"
               >
                 标记为已读
               </el-button>

@@ -6,7 +6,7 @@
     <div class="search-bar">
       <el-input
           v-model="searchKeyword"
-          placeholder="请输入用户名或真实姓名搜索"
+          placeholder="请输入ID搜索"
           style="width: 300px; margin-right: 10px;"
           clearable
           @clear="handleSearch"

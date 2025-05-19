@@ -1,20 +1,21 @@
-<!-- src/components/Navbar.vue -->
 <script setup lang="ts">
-import { defineProps } from 'vue';
-import { useRoute } from 'vue-router';
-
-const route = useRoute();
+import NavItem from './Navbar/NavItem.vue';
 </script>
 
 <template>
   <div class="navbar">
     <div class="navbar-left">
-      <div class="logo">🧠 AI 考试系统</div>
+      <div class="logo">
+
+        AI 考学宝</div>
       <nav class="nav-links">
-        <RouterLink to="/" class="nav-item" :class="{ active: route.path === '/' }">首页</RouterLink>
-        <RouterLink to="/users" class="nav-item" :class="{ active: route.path === '/users' }">用户管理</RouterLink>
-    </nav>
+        <!-- 仪表盘菜单 -->
+        <NavItem to="/dashboard" label="仪表盘" />
+        <!-- 用户管理 -->
+        <NavItem to="/users" label="用户管理" exact />
+      </nav>
     </div>
+
     <div class="navbar-right">
       <slot></slot>
     </div>
@@ -43,22 +44,59 @@ const route = useRoute();
 
     .nav-links {
       display: flex;
-      gap: 16px;
+      align-items: center;
+      gap: 20px;
 
-      .nav-item {
-        color: #333;
-        text-decoration: none;
-        font-size: 14px;
-        padding: 4px 8px;
-        border-radius: 4px;
-        transition: background-color 0.2s;
+      .nav-item-wrapper {
+        position: relative;
 
-        &:hover {
-          background-color: #f0f0f0;
+        .sub-menu {
+          position: absolute;
+          top: 100%;
+          left: 0;
+          z-index: 10;
+          background: #fff;
+          border: 1px solid #eee;
+          border-radius: 4px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          min-width: 120px;
+
+          list-style: none; // 移除小圆点
+          margin: 0;
+          padding: 6px 0;
+
+          display: block;
+          opacity: 0;
+          visibility: hidden;
+          transform: translateY(10px);
+          transition: all 0.2s ease;
+
+          li {
+            padding: 4px 16px;
+
+            a {
+              color: #333;
+              font-size: 13px;
+              display: block;
+
+              &:hover {
+                color: #409EFF;
+                background-color: #f5f5f5;
+              }
+
+              &.active {
+                color: #409EFF;
+                font-weight: bold;
+              }
+            }
+          }
         }
 
-        &.active {
-          background-color: #e0e0e0;
+
+        &:hover .sub-menu {
+          opacity: 1;
+          visibility: visible;
+          transform: translateY(0);
         }
       }
     }
@@ -67,6 +105,27 @@ const route = useRoute();
   .navbar-right {
     display: flex;
     align-items: center;
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+    padding: 10px;
+
+    .navbar-left {
+      flex-direction: column;
+      align-items: flex-start;
+
+      .nav-links {
+        flex-direction: column;
+        gap: 10px;
+      }
+    }
+
+    .navbar-right {
+      margin-top: 10px;
+    }
   }
 }
 </style>
