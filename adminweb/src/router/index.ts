@@ -28,7 +28,7 @@ const routes: RouteRecordRaw[] = [
     {
         path: '/users',
         name: 'Users',
-        component: () => import('@/views/UserManager.vue'),
+        component: () => import('@/views/ExerciseManager.vue'),
     },
     {
         path: '/dashboard',

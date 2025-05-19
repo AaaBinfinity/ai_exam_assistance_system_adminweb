@@ -1,5 +1,6 @@
+//src/api/exam/exercise.ts
+
 import request from '@/utils/request'
-import type { AxiosProgressEvent } from 'axios'
 
 /**
  * 获取习题列表（分页）

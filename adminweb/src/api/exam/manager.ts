@@ -1,44 +1,50 @@
+//src/api/exam/manager.ts
+
+
 import request from '@/utils/request'
 import type { AxiosProgressEvent } from 'axios'
 
+// 可选：定义习题类型
+interface Exercise {
+    id?: string
+    content: string
+    answer: string[]
+    options: { id: string; content: string }[]
+    type: string
+    subject: string
+    knowledge_point: string[]
+    order?: boolean
+    check_type?: number
+    attachments?: string[]
+}
+
 /**
  * 添加习题（可上传附件）
- * @param question 习题JSON数据
- * @param files 附件文件数组
- * @param onUploadProgress 上传进度回调
- * @returns 添加的习题信息
  */
 export function addExercise(
-    question: any,
+    question: Exercise,
     files?: File[],
     onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
 ) {
     const formData = new FormData()
     formData.append('question', JSON.stringify(question))
 
-    if (files && files.length > 0) {
-        files.forEach(file => {
-            formData.append('files', file)
-        })
+    if (files?.length) {
+        files.forEach(file => formData.append('attachments', file))
     }
 
     return request({
         url: '/exam/exam-manager',
         method: 'post',
         data: formData,
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        },
         onUploadProgress
     })
 }
 
 /**
  * 修改习题信息
- * @param exercise 习题数据（必须包含id）
- * @returns 修改后的习题信息
  */
-export function updateExercise(exercise: any) {
+export function updateExercise(exercise: Exercise) {
     return request({
         url: '/exam/exam-manager',
         method: 'put',
@@ -48,8 +54,6 @@ export function updateExercise(exercise: any) {
 
 /**
  * 删除习题
- * @param questionId 习题ID
- * @returns 删除结果
  */
 export function deleteExercise(questionId: string) {
     return request({
@@ -61,10 +65,8 @@ export function deleteExercise(questionId: string) {
 
 /**
  * 批量添加习题
- * @param exercises 习题数组
- * @returns 添加结果
  */
-export function batchAddExercises(exercises: any[]) {
+export function batchAddExercises(exercises: Exercise[]) {
     return request({
         url: '/exam/exam-manager/adds',
         method: 'post',
@@ -74,10 +76,6 @@ export function batchAddExercises(exercises: any[]) {
 
 /**
  * 为习题添加附件
- * @param questionId 习题ID
- * @param files 附件文件数组
- * @param onUploadProgress 上传进度回调
- * @returns 添加结果
  */
 export function addExerciseAttachments(
     questionId: string,
@@ -86,18 +84,12 @@ export function addExerciseAttachments(
 ) {
     const formData = new FormData()
     formData.append('questionId', questionId)
-
-    files.forEach(file => {
-        formData.append('files', file)
-    })
+    files.forEach(file => formData.append('attachments', file))
 
     return request({
         url: '/exam/exam-manager/attachments',
         method: 'post',
         data: formData,
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        },
         onUploadProgress
     })
 }

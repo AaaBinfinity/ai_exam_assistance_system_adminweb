@@ -6,13 +6,11 @@ import NavItem from './Navbar/NavItem.vue';
   <div class="navbar">
     <div class="navbar-left">
       <div class="logo">
-
-        AI 考学宝</div>
+        AI 考学宝
+      </div>
       <nav class="nav-links">
-        <!-- 仪表盘菜单 -->
-        <NavItem to="/dashboard" label="仪表盘" />
-        <!-- 用户管理 -->
-        <NavItem to="/users" label="用户管理" exact />
+        <NavItem to="/dashboard" label="数据面板"/>
+        <NavItem to="/users" label="用户管理" exact/>
       </nav>
     </div>
 
