@@ -1,7 +1,5 @@
 <template>
   <div class="user-manager">
-    <h1>用户管理</h1>
-
     <!-- 搜索栏 -->
     <div class="search-bar">
       <el-input

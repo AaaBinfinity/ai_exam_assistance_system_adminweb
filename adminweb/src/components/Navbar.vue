@@ -10,7 +10,8 @@ import NavItem from './Navbar/NavItem.vue';
       </div>
       <nav class="nav-links">
         <NavItem to="/dashboard" label="数据面板"/>
-        <NavItem to="/users" label="用户管理" exact/>
+        <NavItem to="/users_manager" label="用户管理" exact/>
+        <NavItem to="/exercise_manager" label="题库管理" exact/>
       </nav>
     </div>
 

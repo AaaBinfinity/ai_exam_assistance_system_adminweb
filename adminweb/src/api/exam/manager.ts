@@ -66,11 +66,14 @@ export function deleteExercise(questionId: string) {
 /**
  * 批量添加习题
  */
-export function batchAddExercises(exercises: Exercise[]) {
+export function batchAddExercises(data: any[]) {
     return request({
         url: '/exam/exam-manager/adds',
         method: 'post',
-        data: exercises
+        data,
+        headers: {
+            'Content-Type': 'application/json'
+        }
     })
 }
 

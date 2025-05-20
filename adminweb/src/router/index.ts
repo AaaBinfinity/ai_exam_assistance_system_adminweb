@@ -26,15 +26,21 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/Profile.vue'),
     },
     {
-        path: '/users',
-        name: 'Users',
-        component: () => import('@/views/ExerciseManager.vue'),
+        path: '/users_manager',
+        name: 'UsersManager',
+        component: () => import('@/views/UserManager.vue'),
     },
     {
         path: '/dashboard',
         name: 'Dashboard',
         component: () => import('@/views/Dashboard.vue'),
     },
+    {
+        path: '/exercise_manager',
+        name: 'ExerciseManager',
+        component: () => import('@/views/ExerciseManager.vue'),
+    },
+
 ];
 
 const router = createRouter({
