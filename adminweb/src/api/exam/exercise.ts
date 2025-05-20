@@ -10,11 +10,19 @@ import request from '@/utils/request'
  * @param size 每页数量，默认为10
  * @returns 习题分页列表
  */
-export function getExerciseList(subject?: string, type?: string, page = 0, size = 10) {
-    return request({
-        url: '/exam/exam-exercise/list',
-        method: 'get',
-        params: { subject, type, page, size }
+export function getExerciseList(
+    subject?: string,
+    type?: string,
+    page: number = 0,
+    size: number = 10
+) {
+    return request.get('/exam/exam-exercise/list', {
+        params: {
+            subject,
+            type,
+            page,
+            size
+        }
     })
 }
 

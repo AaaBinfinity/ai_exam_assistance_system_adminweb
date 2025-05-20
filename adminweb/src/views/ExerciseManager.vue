@@ -16,18 +16,7 @@
           @select="handleExerciseSelect"
           @page-change="fetchExercises"
       />
-      <ExerciseDetail
-          v-if="selectedExercise"
-          :exercise="selectedExercise"
-          :viewMode="isViewMode"
-          :questionTypeMap="questionTypeMap"
-          @save="handleSave"
-          @cancel="isViewMode = true"
-          @toggle-edit="isViewMode = false"
-          @add-option="addOption"
-          @remove-option="removeOption"
-          @remove-attachment="removeAttachment"
-      />
+
     </div>
     <AddDialog v-model="addDialogVisible" :data="newExercise" @submit="handleAddExercise" />
     <BatchAddDialog

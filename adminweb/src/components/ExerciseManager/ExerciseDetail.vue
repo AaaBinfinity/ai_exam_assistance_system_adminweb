@@ -73,15 +73,17 @@
           </div>
         </div>
         <div v-else>暂无附件</div>
+
+        <el-button>添加附件</el-button>
       </el-form-item>
 
       <el-form-item>
-        <el-button v-if="viewMode" type="primary" @click="$emit('toggle-edit')">编辑</el-button>
-        <template v-else>
+        <template v-if="!viewMode">
           <el-button type="primary" @click="$emit('save')">保存</el-button>
           <el-button @click="$emit('cancel')">取消</el-button>
         </template>
       </el-form-item>
+
     </el-form>
   </div>
 </template>

@@ -106,25 +106,5 @@ import NavItem from './Navbar/NavItem.vue';
     align-items: center;
   }
 
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: flex-start;
-    height: auto;
-    padding: 10px;
-
-    .navbar-left {
-      flex-direction: column;
-      align-items: flex-start;
-
-      .nav-links {
-        flex-direction: column;
-        gap: 10px;
-      }
-    }
-
-    .navbar-right {
-      margin-top: 10px;
-    }
-  }
 }
 </style>

@@ -101,7 +101,9 @@ watch(activeTab, () => {
       size="40%"
       direction="rtl"
       @close="handleClose"
+      class="drawer-content"
   >
+
 
     <el-tabs v-model="activeTab">
       <el-tab-pane label="收件箱" name="inbox" />
@@ -168,12 +170,78 @@ watch(activeTab, () => {
 </template>
 
 <style scoped lang="scss">
+// 整体抽屉区域
+.drawer-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+// Tab 切换区域
+.tabs {
+  margin-bottom: 8px;
+}
+
+// 滚动区域
+.scroll-area {
+  flex: 1;
+  overflow: hidden;
+  padding-right: 8px;
+}
+
+// 消息项目样式
 .message-item {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
   .message-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
+
+    strong {
+      color: #333;
+    }
+
+    .el-tag {
+      margin-left: 8px;
+    }
+  }
+
+  p {
+    margin: 0;
+    color: #555;
+    line-height: 1.5;
+    word-break: break-word;
+  }
+
+  .el-button {
+    margin-top: 6px;
   }
 }
+
+// 分页样式
+.pagination-wrapper {
+  margin-top: 16px;
+  text-align: center;
+}
+
+// 发送消息区域
+.form-area {
+  padding: 16px;
+
+  .el-form-item {
+    margin-bottom: 20px;
+  }
+
+  .el-input,
+  .el-textarea {
+    width: 100%;
+  }
+}
+
 </style>
