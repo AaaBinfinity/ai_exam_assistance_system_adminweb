@@ -1,66 +1,131 @@
 <template>
   <div class="operation-bar">
-    <el-button type="primary" @click="handleAdd">添加习题</el-button>
-    <el-button @click="handleBatchAdd">批量添加</el-button>
+    <!-- 筛选区域 -->
+    <div class="filter-group">
+      <el-select
+          v-model="localSubject"
+          placeholder="选择学科"
+          clearable
+          size="small"
+          class="filter-item"
+      >
+        <el-option
+            v-for="item in subjectOptions"
+            :key="item"
+            :label="item"
+            :value="item"
+        />
+      </el-select>
 
-    <!-- 添加附件上传按钮 -->
-    <el-upload
-        v-if="selectedExercise"
-        action=""
-        :show-file-list="false"
-        :before-upload="beforeUpload"
-        :http-request="uploadAttachment"
-    >
-    </el-upload>
+      <el-select
+          v-model="localType"
+          placeholder="选择题型"
+          clearable
+          size="small"
+          class="filter-item"
+      >
+        <el-option
+            v-for="(label, key) in questionTypeMap"
+            :key="key"
+            :label="label"
+            :value="key"
+        />
+      </el-select>
 
-    <el-button
-        type="danger"
-        :disabled="!selectedExercise"
-        @click="handleDelete"
-    >
-      删除
-    </el-button>
+      <el-button type="primary" size="small" @click="emitFilter">
+        筛选
+      </el-button>
+    </div>
+
+    <!-- 操作按钮区域 -->
+    <div class="action-group">
+      <el-button type="primary" size="small" @click="handleAdd">
+        添加习题
+      </el-button>
+      <el-button size="small" @click="handleBatchAdd">
+        批量添加
+      </el-button>
+      <el-button
+          type="danger"
+          size="small"
+          :disabled="!selectedExercise"
+          @click="handleDelete"
+      >
+        删除
+      </el-button>
+      <el-button size="small" :icon="Refresh" @click="handleRefresh">
+        刷新
+      </el-button>
+    </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { PropType } from 'vue'
-import type { UploadRequestOptions } from 'element-plus'
+import { ref, PropType } from 'vue'
+import { Exercise } from '@/api/exam/types'
+import { Refresh } from '@element-plus/icons-vue'
 
-// 定义 Props
 const props = defineProps({
   selectedExercise: {
     type: Object as PropType<Exercise | null>,
-    default: null
+    default: null,
   },
-  beforeUpload: {
-    type: Function as PropType<(file: File) => boolean | Promise<boolean>>,
-    required: true
+  subjectOptions: {
+    type: Array as PropType<string[]>,
+    default: () => [],
   },
-  uploadAttachment: {
-    type: Function as PropType<(options: UploadRequestOptions) => void>,
-    required: true
-  }
+  questionTypeMap: {
+    type: Object as PropType<Record<string, string>>,
+    default: () => ({}),
+  },
 })
 
-// 定义 Emits
 const emit = defineEmits<{
   (e: 'add'): void
   (e: 'batch-add'): void
   (e: 'delete'): void
+  (e: 'filter', filter: { subject: string | null; type: string | null }): void
+  (e: 'refresh'): void
 }>()
 
-// 事件处理封装
+const localSubject = ref<string | null>(null)
+const localType = ref<string | null>(null)
+
 const handleAdd = () => emit('add')
 const handleBatchAdd = () => emit('batch-add')
-const handleDelete = () => emit('delete')
+const handleDelete = () => props.selectedExercise && emit('delete')
+const handleRefresh = () => emit('refresh')
+
+const emitFilter = () => {
+  emit('filter', {
+    subject: localSubject.value,
+    type: localType.value,
+  })
+}
 </script>
 
 <style scoped>
 .operation-bar {
   display: flex;
-  gap: 12px;
+  justify-content: space-between;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  padding: 12px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  gap: 12px;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.filter-group,
+.action-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.filter-item {
+  width: 150px;
 }
 </style>

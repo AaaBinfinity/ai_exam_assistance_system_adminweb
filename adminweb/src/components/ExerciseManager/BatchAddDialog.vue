@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { batchAddExercises } from '@/api/exam/manager'
 import * as XLSX from 'xlsx'
+import { UploadFilled } from '@element-plus/icons-vue'
+
 
 // 弹窗显示控制
 const visible = defineModel<boolean>()
@@ -114,7 +116,11 @@ function resetState() {
         :show-file-list="true"
         :file-list="uploadFiles"
     >
-      <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+      <template>
+        <el-icon>
+          <UploadFilled />
+        </el-icon>
+      </template>
       <div class="el-upload__text">
         将 Excel 文件拖到此处，或 <em>点击上传</em>
       </div>

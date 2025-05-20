@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useRouter } from 'vue-router';
 import { ElDropdown, ElDropdownMenu, ElDropdownItem, ElAvatar } from 'element-plus';
+import { User, SwitchButton } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { defineEmits } from 'vue'
 
 const props = defineProps({
   username: {
@@ -44,6 +46,7 @@ const router = useRouter();
         </el-dropdown-item>
       </el-dropdown-menu>
     </template>
+
   </el-dropdown>
 </template>
 

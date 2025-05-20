@@ -1,6 +1,5 @@
 <template>
   <div class="exercise-list">
-    <!-- 表格 -->
     <el-table
         :data="exerciseList"
         style="width: 100%"
@@ -13,12 +12,18 @@
           @click.stop=""
       />
 
+      <!-- ID 列 -->
+      <el-table-column prop="id" label="ID" width="180" />
+
       <!-- 题目内容列 -->
       <el-table-column prop="content" label="题目">
         <template #default="{ row }">
           <div v-html="row.content"></div>
         </template>
       </el-table-column>
+
+      <!-- 学科列 -->
+      <el-table-column prop="subject" label="学科" width="160" />
 
       <!-- 类型列 -->
       <el-table-column prop="type" label="类型" width="100">
@@ -49,26 +54,28 @@
     </el-table>
 
     <!-- 分页 -->
-    <el-pagination
-        v-model:current-page="pagination.current"
-        v-model:page-size="pagination.size"
+    <PaginationBar
+        :current-page="pagination.current"
+        :page-size="pagination.size"
         :total="pagination.total"
         layout="prev, pager, next"
-        @current-change="fetchExerciseList"
+        @update:currentPage="pagination.current = $event"
+        @update:pageSize="pagination.size = $event"
+        @change="fetchExerciseList"
     />
 
     <!-- 编辑弹窗 -->
     <el-dialog v-model="editDialogVisible" title="编辑习题" width="60%">
       <ExerciseDetail
           v-if="editDialogVisible"
-      :exercise="currentExercise"
-      :questionTypeMap="questionTypeMap"
-      :viewMode="false"
-      @save="handleSave"
-      @cancel="editDialogVisible = false"
-      @add-option="addOption"
-      @remove-option="removeOption"
-      @remove-attachment="removeAttachment"
+          :exercise="currentExercise"
+          :questionTypeMap="questionTypeMap"
+          :viewMode="false"
+          @save="handleSave"
+          @cancel="editDialogVisible = false"
+          @add-option="addOption"
+          @remove-option="removeOption"
+          @remove-attachment="removeAttachment"
       />
     </el-dialog>
   </div>
@@ -76,6 +83,7 @@
 
 <script lang="ts" setup>
 import { ref, onMounted, watch } from 'vue'
+import PaginationBar from '@/components/common/PaginationBar.vue'
 import type { PropType } from 'vue'
 import { getExerciseList } from '@/api/exam/exercise'
 import ExerciseDetail from './ExerciseDetail.vue'
@@ -87,13 +95,18 @@ interface Exercise {
   difficulty: number;
   options?: string[];
   attachments?: Array<{ id: string }>;
-  // 其他可能需要的字段...
 }
 
 // Props
 const props = defineProps({
-  subject: String,
-  type: String,
+  subject: {
+    type: String,
+    default: null
+  },
+  type: {
+    type: String,
+    default: null
+  },
   questionTypeMap: {
     type: Object as PropType<Record<string, string>>,
     default: () => ({})
@@ -107,7 +120,7 @@ const emit = defineEmits(['select', 'edit'])
 const selectedRows = ref<Exercise[]>([])
 const handleSelectionChange = (rows: Exercise[]) => {
   selectedRows.value = rows
-  emit('select', rows)
+  emit('select', rows.length > 0 ? rows[0] : null) // Only emit the first selected item or null
 }
 
 // 数据定义
@@ -183,20 +196,63 @@ watch(
 )
 
 onMounted(fetchExerciseList)
+
+// 暴露刷新方法
+defineExpose({
+  fetchExerciseList
+})
 </script>
+
 
 <style scoped>
 .exercise-list {
-  padding: 1rem;
+  padding: 1.5rem;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
 }
 
-/* 防止复选框点击影响其他元素 */
+/* 表格内容行样式 */
+:deep(.el-table) {
+  font-size: 14px;
+}
+
+/* 表格头部加粗 */
+:deep(.el-table__header-wrapper th) {
+  font-weight: 600;
+  background-color: #f5f7fa;
+}
+
+/* 表格单元格内边距优化 */
 :deep(.el-table__cell) {
-  position: relative;
+  padding: 12px 10px;
 }
 
-:deep(.el-checkbox) {
-  position: relative;
-  z-index: 1;
+/* ID 列字体颜色 */
+:deep(.el-table__row td:first-child) {
+  color: #999;
+}
+
+/* 难度星星组件显示靠右 */
+:deep(.el-rate) {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 编辑按钮居中 */
+:deep(.el-button) {
+  margin: 0 4px;
+}
+
+/* 编辑弹窗内容样式微调 */
+:deep(.el-dialog__body) {
+  padding-top: 10px;
+}
+
+/* 分页栏样式 */
+:deep(.el-pagination) {
+  margin-top: 16px;
+  justify-content: center;
 }
 </style>

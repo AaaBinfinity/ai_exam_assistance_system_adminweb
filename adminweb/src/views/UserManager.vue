@@ -53,17 +53,15 @@
     </el-table>
 
     <!-- 分页 -->
-    <div class="pagination">
-      <el-pagination
-          v-model:current-page="currentPage"
-          v-model:page-size="pageSize"
-          :page-sizes="[10, 20, 30, 50]"
-          :total="total"
-          layout="total, sizes, prev, pager, next, jumper"
-          @size-change="fetchUserList"
-          @current-change="fetchUserList"
-      />
-    </div>
+    <PaginationBar
+        :current-page="currentPage"
+        :page-size="pageSize"
+        :total="total"
+        @update:currentPage="currentPage = $event"
+        @update:pageSize="pageSize = $event"
+        @change="fetchUserList"
+    />
+
 
     <!-- 用户角色对话框 -->
     <el-dialog v-model="roleDialogVisible" title="用户角色" width="30%">
@@ -83,6 +81,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import PaginationBar from '@/components/common/PaginationBar.vue'
 import { ElMessage } from 'element-plus'
 import {
   getUserList,
