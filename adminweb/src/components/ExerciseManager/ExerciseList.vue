@@ -35,7 +35,7 @@ import { ref, onMounted } from 'vue'
 import { getExerciseList } from '@/api/exam/exercise'
 
 const props = defineProps({
-  subject: String,
+  subject: String,Q
   type: String,
   questionTypeMap: Object as PropType<Record<string, string>>
 })

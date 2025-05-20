@@ -38,8 +38,18 @@
       <el-button type="primary" @click="addOption">添加选项</el-button>
     </el-form-item>
 
+    <!-- 正确答案 -->
     <el-form-item label="正确答案" prop="answer" required>
-      <template v-if="['single', 'multiple'].includes(formData.questionType)">
+      <template v-if="formData.questionType === 'single'">
+        <el-radio-group v-model="formData.answer">
+          <el-radio
+              v-for="(option, index) in formData.options"
+              :key="index"
+              :label="String.fromCharCode(65 + index)"
+          />
+        </el-radio-group>
+      </template>
+      <template v-else-if="formData.questionType === 'multiple'">
         <el-checkbox-group v-model="formData.answer">
           <el-checkbox
               v-for="(option, index) in formData.options"
@@ -84,9 +94,11 @@
 </template>
 
 <script lang="ts" setup>
-import { ref , reactive } from 'vue'
+import { ref, reactive } from 'vue'
 import { Delete } from '@element-plus/icons-vue'
-import {ElMessage, UploadFile} from 'element-plus'
+import { ElMessage, UploadFile } from 'element-plus'
+import { addExercise } from '@/api/exam/manager'
+
 
 const props = defineProps({
   initialData: {
@@ -109,7 +121,7 @@ const formData = reactive({
   questionType: 'single',
   question: '',
   options: ['', ''],
-  answer: [],
+  answer: '',
   analysis: '',
   difficulty: 3,
   ...props.initialData
@@ -119,14 +131,22 @@ const files = ref<UploadFile[]>([])
 
 // 监听题目类型变化
 const handleTypeChange = (type: string) => {
-  if (['single', 'multiple'].includes(type)) {
+  if (type === 'single') {
+    formData.answer = ''
     if (!formData.options || formData.options.length < 2) {
       formData.options = ['', '']
     }
-    formData.answer = type === 'single' ? '' : []
+  } else if (type === 'multiple') {
+    formData.answer = []
+    if (!formData.options || formData.options.length < 2) {
+      formData.options = ['', '']
+    }
+  } else if (type === 'judgment') {
+    formData.options = []
+    formData.answer = '正确'
   } else {
     formData.options = []
-    formData.answer = type === 'judgment' ? '正确' : ''
+    formData.answer = ''
   }
 }
 
@@ -138,12 +158,12 @@ const addOption = () => {
 // 删除选项
 const removeOption = (index: number) => {
   formData.options.splice(index, 1)
-  // 更新答案
-  if (Array.isArray(formData.answer)) {
-    formData.answer = formData.answer.filter(
-        ans => ans !== String.fromCharCode(65 + index)
-    )
-  } else if (formData.answer === String.fromCharCode(65 + index)) {
+
+  const removedLabel = String.fromCharCode(65 + index)
+
+  if (formData.questionType === 'multiple' && Array.isArray(formData.answer)) {
+    formData.answer = formData.answer.filter(ans => ans !== removedLabel)
+  } else if (formData.questionType === 'single' && formData.answer === removedLabel) {
     formData.answer = ''
   }
 }
@@ -162,24 +182,31 @@ const handleRemove = (file: UploadFile) => {
   files.value = files.value.filter(item => item.uid !== file.uid)
 }
 
-// 提交表单
-const handleSubmit = () => {
-  // 验证表单
+// 表单提交
+// 表单提交
+const handleSubmit = async () => {
   if (!formData.question) {
     ElMessage.error('请输入题目内容')
     return
   }
 
-  if (['single', 'multiple'].includes(formData.questionType)) {
+  if (formData.questionType === 'single' || formData.questionType === 'multiple') {
     if (formData.options.length < 2) {
       ElMessage.error('至少需要两个选项')
       return
     }
+
     if (formData.options.some(opt => !opt)) {
       ElMessage.error('选项内容不能为空')
       return
     }
-    if (!formData.answer || (Array.isArray(formData.answer) && formData.answer.length === 0)) {
+
+    if (formData.questionType === 'single' && !formData.answer) {
+      ElMessage.error('请选择正确答案')
+      return
+    }
+
+    if (formData.questionType === 'multiple' && (!formData.answer || formData.answer.length === 0)) {
       ElMessage.error('请选择正确答案')
       return
     }
@@ -189,10 +216,23 @@ const handleSubmit = () => {
   }
 
   const fileList = files.value.map(file => file.raw as File)
-  emit('submit', { ...formData }, fileList.length > 0 ? fileList : undefined)
+
+  try {
+    await addExercise({ ...formData }, fileList, (progressEvent) => {
+      const percent = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1))
+      console.log(`上传进度: ${percent}%`)
+    })
+
+    ElMessage.success('题目添加成功')
+    emit('submit')
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('题目添加失败')
+  }
 }
 
-// 暴露submit方法
+
+// 暴露 submit 方法
 defineExpose({
   submit: handleSubmit
 })
