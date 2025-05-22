@@ -25,7 +25,7 @@
           class="filter-item"
       >
         <el-option
-            v-for="(label, key) in questionTypeMap"
+            v-for="(label, key) in props.questionTypeMap"
             :key="key"
             :label="label"
             :value="key"
@@ -35,7 +35,11 @@
       <el-button type="primary" size="small" @click="emitFilter">
         筛选
       </el-button>
+      <el-button size="small" @click="resetFilter">
+        重置
+      </el-button>
     </div>
+
 
     <!-- 操作按钮区域 -->
     <div class="action-group">
@@ -48,10 +52,10 @@
       <el-button
           type="danger"
           size="small"
-          :disabled="!selectedExercise"
+          :disabled="!props.selectedExercises || props.selectedExercises.length === 0"
           @click="handleDelete"
       >
-        删除
+        删除选中
       </el-button>
       <el-button size="small" :icon="Refresh" @click="handleRefresh">
         刷新
@@ -61,17 +65,22 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, PropType } from 'vue'
-import { Exercise } from '@/api/exam/types'
+import { ref, onMounted } from 'vue'
+import type { PropType } from 'vue'
+
+import { ElMessageBox, ElMessage } from 'element-plus'
 import { Refresh } from '@element-plus/icons-vue'
+import { getExerciseList, getSubjectList } from '@/api/exam/exercise'
+import { deleteExercise, batchDeleteExercises } from '@/api/exam/manager'
+import type { Exercise } from '@/api/exam/types'
 
 const props = defineProps({
   selectedExercise: {
     type: Object as PropType<Exercise | null>,
     default: null,
   },
-  subjectOptions: {
-    type: Array as PropType<string[]>,
+  selectedExercises: {
+    type: Array as PropType<Exercise[]>,
     default: () => [],
   },
   questionTypeMap: {
@@ -84,25 +93,73 @@ const emit = defineEmits<{
   (e: 'add'): void
   (e: 'batch-add'): void
   (e: 'delete'): void
-  (e: 'filter', filter: { subject: string | null; type: string | null }): void
+  (e: 'filter', result: Exercise[]): void
   (e: 'refresh'): void
 }>()
 
 const localSubject = ref<string | null>(null)
 const localType = ref<string | null>(null)
+const subjectOptions = ref<string[]>([])
+
+const resetFilter = () => {
+  localSubject.value = null
+  localType.value = null
+  emit('filter', {
+    subject: null,
+    type: null
+  })
+}
+const fetchSubjectOptions = async () => {
+  try {
+    const res = await getSubjectList()
+    subjectOptions.value = res.data
+  } catch (error) {
+    ElMessage.error('获取学科失败')
+  }
+}
+
+onMounted(() => {
+  fetchSubjectOptions()
+})
 
 const handleAdd = () => emit('add')
 const handleBatchAdd = () => emit('batch-add')
-const handleDelete = () => props.selectedExercise && emit('delete')
+
+// ✅ 批量删除按钮逻辑
+const handleDelete = async () => {
+  if (!props.selectedExercises || props.selectedExercises.length === 0) {
+    ElMessage.warning('请先选择习题')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(`确定要删除选中的 ${props.selectedExercises.length} 道习题吗？`, '警告', {
+      type: 'warning',
+      confirmButtonText: '删除',
+      cancelButtonText: '取消',
+    })
+
+    const ids = props.selectedExercises.map(item => item.id)
+    await batchDeleteExercises(ids)
+
+    ElMessage.success('批量删除成功')
+    emit('delete')
+  } catch (err) {
+    ElMessage.info('已取消删除')
+  }
+}
+
 const handleRefresh = () => emit('refresh')
 
 const emitFilter = () => {
   emit('filter', {
     subject: localSubject.value,
-    type: localType.value,
+    type: localType.value
   })
 }
+
 </script>
+
 
 <style scoped>
 .operation-bar {

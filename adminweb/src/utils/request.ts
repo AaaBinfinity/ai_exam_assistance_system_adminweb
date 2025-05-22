@@ -1,4 +1,7 @@
 import axios, { AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import { ElMessage } from 'element-plus'
+import { removeToken , removeUserInfo } from '@/utils/auth'
+
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 
@@ -48,10 +51,11 @@ service.interceptors.response.use(
         if (error.response) {
             switch (error.response.status) {
                 case 401:
-                    return handleUnauthorized();
-                case 403:
-                    console.error('无权访问:', error);
+                    console.error(error);
                     break;
+                case 403:
+                    return handleUnauthorized();
+
                 case 404:
                     console.error('资源不存在:', error);
                     break;
@@ -66,14 +70,18 @@ service.interceptors.response.use(
     }
 );
 
-// 处理未授权情况
-function handleUnauthorized() {
-    // 使用更友好的提示方式
-    if (window.confirm('登录状态已过期，请重新登录')) {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-    }
-    return Promise.reject(new Error('用户未授权'));
-}
+export function handleUnauthorized() {
+    // 提示用户
+    ElMessage.error('登录状态已过期，请重新登录')
 
+    // 清除本地存储
+    removeToken()
+    removeUserInfo()
+
+    // 跳转登录页
+    window.location.href = '/login'
+
+    // 返回错误 Promise
+    return Promise.reject(new Error('用户未授权'))
+}
 export default service;

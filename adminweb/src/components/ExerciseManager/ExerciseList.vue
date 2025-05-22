@@ -120,8 +120,9 @@ const emit = defineEmits(['select', 'edit'])
 const selectedRows = ref<Exercise[]>([])
 const handleSelectionChange = (rows: Exercise[]) => {
   selectedRows.value = rows
-  emit('select', rows.length > 0 ? rows[0] : null) // Only emit the first selected item or null
+  emit('select', rows)
 }
+
 
 // 数据定义
 const exerciseList = ref<Exercise[]>([])
