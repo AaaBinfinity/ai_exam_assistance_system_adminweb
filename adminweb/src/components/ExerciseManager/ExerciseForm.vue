@@ -2,7 +2,7 @@
 import { ref, reactive, computed } from 'vue'
 import { Delete } from '@element-plus/icons-vue'
 import { ElMessage, type UploadFile } from 'element-plus'
-import { addExercise } from '@/api/exam/manager'
+import { addExercise,addExerciseAttachments } from '@/api/exam/manager'
 
 // 常量定义
 const QUESTION_TYPE_LABELS = {
@@ -46,6 +46,7 @@ const formData = reactive<FormData>({
 const knowledgeInput = ref('')
 const files = ref<UploadFile[]>([])
 
+
 // 计算属性
 const isChoiceType = computed(() =>
     ['single', 'multiple'].includes(formData.questionType)
@@ -88,6 +89,9 @@ const beforeUpload = (file: File) => {
     return false
   }
   return true
+}
+const handleChange = (uploadFile: UploadFile, uploadFiles: UploadFile[]) => {
+  files.value = uploadFiles
 }
 
 const handleRemove = (file: UploadFile) => {
@@ -143,8 +147,11 @@ const resetForm = () => {
   files.value = []
 }
 
+
 const handleSubmit = async () => {
   if (!validateForm()) return
+
+  const fileList = files.value.map(file => file.raw as File)
 
   const payload = {
     content: formData.question,
@@ -158,17 +165,19 @@ const handleSubmit = async () => {
     knowledge_point: formData.knowledge_point,
     order: true,
     check_type: 1,
-    attachments: files.value.map(file => file.name),
+    attachments: fileList.map(file => file.name),  // ✨ 提取文件名作为附件
     difficulty: formData.difficulty
   }
 
-  const fileList = files.value.map(file => file.raw as File)
-
   try {
-    await addExercise(payload, fileList, (progressEvent) => {
-      const percent = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1))
-      // 可以在这里添加进度显示逻辑
-    })
+    // 1. 提交题目（含文件名）
+    const response = await addExercise(payload)
+
+    // 2. 提交文件内容（如果有）
+    if (fileList.length > 0) {
+      await addExerciseAttachments(response.data.id, fileList)
+    }
+
     ElMessage.success('题目添加成功')
     emit('submit')
     resetForm()
@@ -177,6 +186,8 @@ const handleSubmit = async () => {
     ElMessage.error('题目添加失败')
   }
 }
+
+
 
 defineExpose({
   submit: handleSubmit,
@@ -282,11 +293,16 @@ defineExpose({
     <!-- 附件上传 -->
     <el-form-item label="附件">
       <el-upload
-          v-model:file-list="files"
-          multiple
+          :file-list="files"
+          :auto-upload="false"
           :before-upload="beforeUpload"
           :on-remove="handleRemove"
+          :on-change="handleChange"
+          :http-request="() => {}"
+      multiple
       >
+
+
         <el-button type="primary">选择文件</el-button>
         <template #tip>
           <div class="el-upload__tip">可上传多个附件，每个不超过10MB</div>
