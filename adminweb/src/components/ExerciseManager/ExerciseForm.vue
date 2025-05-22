@@ -1,3 +1,189 @@
+<script lang="ts" setup>
+import { ref, reactive, computed } from 'vue'
+import { Delete } from '@element-plus/icons-vue'
+import { ElMessage, type UploadFile } from 'element-plus'
+import { addExercise } from '@/api/exam/manager'
+
+// 常量定义
+const QUESTION_TYPE_LABELS = {
+  single: '单选题',
+  multiple: '多选题',
+  judgment: '判断题',
+  fill: '填空题',
+  short: '简答题',
+  code: '编程题'
+} as const
+
+// 类型定义
+type QuestionType = keyof typeof QUESTION_TYPE_LABELS
+type FormData = {
+  questionType: QuestionType
+  question: string
+  options: string[]
+  answer: string | string[]
+  subject: string
+  knowledge_point: string[]
+  analysis: string
+  difficulty: number
+}
+
+// 组件引用
+const emit = defineEmits(['submit'])
+const formRef = ref()
+
+// 表单数据
+const formData = reactive<FormData>({
+  questionType: 'single',
+  question: '',
+  options: ['', ''],
+  answer: '',
+  subject: '',
+  knowledge_point: [],
+  analysis: '',
+  difficulty: 3
+})
+
+const knowledgeInput = ref('')
+const files = ref<UploadFile[]>([])
+
+// 计算属性
+const isChoiceType = computed(() =>
+    ['single', 'multiple'].includes(formData.questionType)
+)
+
+// 方法
+const handleTypeChange = (type: QuestionType) => {
+  formData.questionType = type
+
+  if (type === 'single' || type === 'multiple') {
+    formData.options = ['', '']
+    formData.answer = type === 'multiple' ? [] : ''
+  } else if (type === 'judgment') {
+    formData.options = []
+    formData.answer = '正确'
+  } else {
+    formData.options = []
+    formData.answer = ''
+  }
+}
+
+const addOption = () => {
+  formData.options.push('')
+}
+
+const removeOption = (index: number) => {
+  formData.options.splice(index, 1)
+  const removedLabel = String.fromCharCode(65 + index)
+
+  if (formData.questionType === 'multiple' && Array.isArray(formData.answer)) {
+    formData.answer = formData.answer.filter(ans => ans !== removedLabel)
+  } else if (formData.questionType === 'single' && formData.answer === removedLabel) {
+    formData.answer = ''
+  }
+}
+
+const beforeUpload = (file: File) => {
+  if (file.size > 10 * 1024 * 1024) {
+    ElMessage.error('文件大小不能超过10MB')
+    return false
+  }
+  return true
+}
+
+const handleRemove = (file: UploadFile) => {
+  files.value = files.value.filter(item => item.uid !== file.uid)
+}
+
+const validateForm = () => {
+  if (!formData.question || !formData.subject || !knowledgeInput.value.trim()) {
+    ElMessage.error('请填写完整信息')
+    return false
+  }
+
+  formData.knowledge_point = knowledgeInput.value
+      .split(',')
+      .map(k => k.trim())
+      .filter(Boolean)
+
+  if (formData.knowledge_point.length === 0) {
+    ElMessage.error('请至少输入一个知识点')
+    return false
+  }
+
+  if (isChoiceType.value) {
+    if (formData.options.length < 2 || formData.options.some(opt => !opt)) {
+      ElMessage.error('至少两个选项，且内容不能为空')
+      return false
+    }
+    if (formData.questionType === 'single' && !formData.answer) {
+      ElMessage.error('请选择正确答案')
+      return false
+    }
+    if (formData.questionType === 'multiple' && (!formData.answer || formData.answer.length === 0)) {
+      ElMessage.error('请选择正确答案')
+      return false
+    }
+  } else if (!formData.answer) {
+    ElMessage.error('请输入正确答案')
+    return false
+  }
+
+  return true
+}
+
+const resetForm = () => {
+  formData.question = ''
+  formData.subject = ''
+  knowledgeInput.value = ''
+  formData.answer = ''
+  formData.options = ['', '']
+  formData.knowledge_point = []
+  formData.analysis = ''
+  formData.difficulty = 3
+  files.value = []
+}
+
+const handleSubmit = async () => {
+  if (!validateForm()) return
+
+  const payload = {
+    content: formData.question,
+    answer: Array.isArray(formData.answer) ? formData.answer : [formData.answer],
+    options: formData.options.map((content, index) => ({
+      id: String.fromCharCode(65 + index),
+      content
+    })),
+    type: QUESTION_TYPE_LABELS[formData.questionType],
+    subject: formData.subject,
+    knowledge_point: formData.knowledge_point,
+    order: true,
+    check_type: 1,
+    attachments: files.value.map(file => file.name),
+    difficulty: formData.difficulty
+  }
+
+  const fileList = files.value.map(file => file.raw as File)
+
+  try {
+    await addExercise(payload, fileList, (progressEvent) => {
+      const percent = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1))
+      // 可以在这里添加进度显示逻辑
+    })
+    ElMessage.success('题目添加成功')
+    emit('submit')
+    resetForm()
+  } catch (error) {
+    console.error(error)
+    ElMessage.error('题目添加失败')
+  }
+}
+
+defineExpose({
+  submit: handleSubmit,
+  resetForm
+})
+</script>
+
 <template>
   <el-form
       ref="formRef"
@@ -9,7 +195,7 @@
     <el-form-item label="题目类型" prop="questionType">
       <el-select v-model="formData.questionType" @change="handleTypeChange">
         <el-option
-            v-for="(label, value) in questionTypeLabels"
+            v-for="(label, value) in QUESTION_TYPE_LABELS"
             :key="value"
             :label="label"
             :value="value"
@@ -23,11 +209,7 @@
     </el-form-item>
 
     <!-- 选择题选项 -->
-    <el-form-item
-        v-if="['single', 'multiple'].includes(formData.questionType)"
-        label="选项"
-        required
-    >
+    <el-form-item v-if="isChoiceType" label="选项" required>
       <div v-for="(option, index) in formData.options" :key="index" class="option-item">
         <el-input v-model="formData.options[index]" style="width: 80%" />
         <el-button
@@ -113,147 +295,6 @@
     </el-form-item>
   </el-form>
 </template>
-
-<script lang="ts" setup>
-import { ref, reactive } from 'vue'
-import { Delete } from '@element-plus/icons-vue'
-import { ElMessage, UploadFile } from 'element-plus'
-import { addExercise } from '@/api/exam/manager'
-
-const emit = defineEmits(['submit'])
-const formRef = ref()
-const knowledgeInput = ref('')
-const files = ref<UploadFile[]>([])
-
-const questionTypeLabels: Record<string, string> = {
-  single: '单选题',
-  multiple: '多选题',
-  judgment: '判断题',
-  fill: '填空题',
-  short: '简答题',
-  code: '编程题'
-}
-
-const formData = reactive({
-  questionType: 'single',
-  question: '',
-  options: ['', ''],
-  answer: '',
-  subject: '',
-  knowledge_point: [] as string[],
-  analysis: '',
-  difficulty: 3
-})
-
-const handleTypeChange = (type: string) => {
-  if (type === 'single' || type === 'multiple') {
-    formData.options = ['', '']
-    formData.answer = type === 'multiple' ? [] : ''
-  } else if (type === 'judgment') {
-    formData.options = []
-    formData.answer = '正确'
-  } else {
-    formData.options = []
-    formData.answer = ''
-  }
-}
-
-const addOption = () => {
-  formData.options.push('')
-}
-
-const removeOption = (index: number) => {
-  formData.options.splice(index, 1)
-  const removedLabel = String.fromCharCode(65 + index)
-
-  if (formData.questionType === 'multiple' && Array.isArray(formData.answer)) {
-    formData.answer = formData.answer.filter(ans => ans !== removedLabel)
-  } else if (formData.questionType === 'single' && formData.answer === removedLabel) {
-    formData.answer = ''
-  }
-}
-
-const beforeUpload = (file: File) => {
-  if (file.size > 10 * 1024 * 1024) {
-    ElMessage.error('文件大小不能超过10MB')
-    return false
-  }
-  return true
-}
-
-const handleRemove = (file: UploadFile) => {
-  files.value = files.value.filter(item => item.uid !== file.uid)
-}
-
-const handleSubmit = async () => {
-  if (!formData.question || !formData.subject || !knowledgeInput.value.trim()) {
-    ElMessage.error('请填写完整信息')
-    return
-  }
-
-  formData.knowledge_point = knowledgeInput.value
-      .split(',')
-      .map(k => k.trim())
-      .filter(k => k)
-
-  if (formData.knowledge_point.length === 0) {
-    ElMessage.error('请至少输入一个知识点')
-    return
-  }
-
-  if (['single', 'multiple'].includes(formData.questionType)) {
-    if (formData.options.length < 2 || formData.options.some(opt => !opt)) {
-      ElMessage.error('至少两个选项，且内容不能为空')
-      return
-    }
-    if (formData.questionType === 'single' && !formData.answer) {
-      ElMessage.error('请选择正确答案')
-      return
-    }
-    if (formData.questionType === 'multiple' && (!formData.answer || formData.answer.length === 0)) {
-      ElMessage.error('请选择正确答案')
-      return
-    }
-  } else if (!formData.answer) {
-    ElMessage.error('请输入正确答案')
-    return
-  }
-
-  const payload = {
-    content: formData.question,
-    answer: Array.isArray(formData.answer) ? formData.answer : [formData.answer],
-    options: formData.options.map((content, index) => ({
-      id: String.fromCharCode(65 + index),
-      content
-    })),
-    type: questionTypeLabels[formData.questionType],
-    subject: formData.subject,
-    knowledge_point: formData.knowledge_point,
-    order: true,
-    check_type: 1,
-    attachments: files.value.map(file => file.name),
-    difficulty: formData.difficulty
-  }
-
-  const fileList = files.value.map(file => file.raw as File)
-
-  try {
-    await addExercise(payload, fileList, (progressEvent) => {
-      const percent = Math.round((progressEvent.loaded * 100) / (progressEvent.total || 1))
-      console.log(`上传进度: ${percent}%`)
-    })
-    ElMessage.success('题目添加成功')
-    emit('submit')
-  } catch (error) {
-    console.error(error)
-    ElMessage.error('题目添加失败')
-  }
-}
-
-defineExpose({
-  submit: handleSubmit
-})
-</script>
 
 <style scoped>
 .option-item {

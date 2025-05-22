@@ -25,22 +25,69 @@ interface Option {
 }
 
 /**
- * 添加习题（支持可选的文件上传）
- * @param question 题目数据（JSON 格式）
- * @param files 可选的文件数组
+ * 向已有习题添加附件
+ * @param questionId 题目 ID
+ * @param files 要上传的文件数组
  * @param onUploadProgress 上传进度回调（可选）
  */
+export function addExerciseAttachments(
+    questionId: string,
+    files: File[],
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
+) {
+    const formData = new FormData()
+    formData.append('questionId', questionId)
+    files.forEach(file => formData.append('files', file))
+
+    return request({
+        url: '/exam/exam-manager/attachments',
+        method: 'POST',
+        data: formData,
+        headers: {
+            'Content-Type': 'multipart/form-data'
+        },
+        onUploadProgress
+    })
+}
+
+
+
 export function addExercise(
     question: Exercise,
     files?: File[],
     onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
 ) {
+    if (files && files.length > 0) {
+        // 确保 attachments 数组存在
+        if (!question.attachments) {
+            question.attachments = []
+        }
+
+        // 添加新文件名到 attachments 数组
+        files.forEach(file => {
+            if (!question.attachments.includes(file.name)) {
+                question.attachments.push(file.name)
+            }
+        })
+    }
+
+    // 如果没有文件，直接发送 JSON
+    if (!files || files.length === 0) {
+        return request({
+            url: '/exam/exam-manager',
+            method: 'POST',
+            data: question,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            onUploadProgress
+        })
+    }
+
+    // 如果有文件，使用 FormData
     const formData = new FormData()
     formData.append('question', JSON.stringify(question))
-
-    if (files && files.length > 0) {
-        files.forEach(file => formData.append('files', file))
-    }
+    files.forEach(file => formData.append('files', file))
 
     return request({
         url: '/exam/exam-manager',
@@ -93,32 +140,6 @@ export function batchAddExercises(exercises: Exercise[]) {
         headers: {
             'Content-Type': 'application/json'
         }
-    })
-}
-
-/**
- * 向已有习题添加附件
- * @param questionId 题目 ID
- * @param files 要上传的文件数组
- * @param onUploadProgress 上传进度回调（可选）
- */
-export function addExerciseAttachments(
-    questionId: string,
-    files: File[],
-    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
-) {
-    const formData = new FormData()
-    formData.append('questionId', questionId)
-    files.forEach(file => formData.append('files', file))
-
-    return request({
-        url: '/exam/exam-manager/attachments',
-        method: 'POST',
-        data: formData,
-        headers: {
-            'Content-Type': 'multipart/form-data'
-        },
-        onUploadProgress
     })
 }
 
