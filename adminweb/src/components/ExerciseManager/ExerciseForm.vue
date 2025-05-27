@@ -2,7 +2,7 @@
 import { ref, reactive, computed } from 'vue'
 import { Delete } from '@element-plus/icons-vue'
 import { ElMessage, type UploadFile } from 'element-plus'
-import { addExercise,addExerciseAttachments } from '@/api/exam/manager'
+import { addExercise, addExerciseAttachments } from '@/api/exam/manager'
 
 // 常量定义
 const QUESTION_TYPE_LABELS = {
@@ -16,10 +16,15 @@ const QUESTION_TYPE_LABELS = {
 
 // 类型定义
 type QuestionType = keyof typeof QUESTION_TYPE_LABELS
+type OptionWithFiles = {
+  content: string
+  files: UploadFile[]
+}
 type FormData = {
   questionType: QuestionType
   question: string
-  options: string[]
+  questionFiles: UploadFile[]
+  options: OptionWithFiles[]
   answer: string | string[]
   subject: string
   knowledge_point: string[]
@@ -35,7 +40,11 @@ const formRef = ref()
 const formData = reactive<FormData>({
   questionType: 'single',
   question: '',
-  options: ['', ''],
+  questionFiles: [],
+  options: [
+    { content: '', files: [] },
+    { content: '', files: [] }
+  ],
   answer: '',
   subject: '',
   knowledge_point: [],
@@ -44,8 +53,6 @@ const formData = reactive<FormData>({
 })
 
 const knowledgeInput = ref('')
-const files = ref<UploadFile[]>([])
-
 
 // 计算属性
 const isChoiceType = computed(() =>
@@ -57,7 +64,10 @@ const handleTypeChange = (type: QuestionType) => {
   formData.questionType = type
 
   if (type === 'single' || type === 'multiple') {
-    formData.options = ['', '']
+    formData.options = [
+      { content: '', files: [] },
+      { content: '', files: [] }
+    ]
     formData.answer = type === 'multiple' ? [] : ''
   } else if (type === 'judgment') {
     formData.options = []
@@ -69,7 +79,7 @@ const handleTypeChange = (type: QuestionType) => {
 }
 
 const addOption = () => {
-  formData.options.push('')
+  formData.options.push({ content: '', files: [] })
 }
 
 const removeOption = (index: number) => {
@@ -84,18 +94,46 @@ const removeOption = (index: number) => {
 }
 
 const beforeUpload = (file: File) => {
+  const validTypes = ['image/jpeg', 'image/png', 'image/gif']
+  if (!validTypes.includes(file.type)) {
+    ElMessage.error('只能上传图片文件 (JPEG, PNG, GIF)')
+    return false
+  }
   if (file.size > 10 * 1024 * 1024) {
     ElMessage.error('文件大小不能超过10MB')
     return false
   }
   return true
 }
-const handleChange = (uploadFile: UploadFile, uploadFiles: UploadFile[]) => {
-  files.value = uploadFiles
+
+const handleQuestionFileChange = (uploadFile: UploadFile, uploadFiles: UploadFile[]) => {
+  formData.questionFiles = uploadFiles
 }
 
-const handleRemove = (file: UploadFile) => {
-  files.value = files.value.filter(item => item.uid !== file.uid)
+const handleOptionFileChange = (index: number, uploadFile: UploadFile, uploadFiles: UploadFile[]) => {
+  formData.options[index].files = uploadFiles
+}
+
+const removeQuestionFile = (file: UploadFile) => {
+  formData.questionFiles = formData.questionFiles.filter(item => item.uid !== file.uid)
+}
+
+const removeOptionFile = (optionIndex: number, file: UploadFile) => {
+  formData.options[optionIndex].files = formData.options[optionIndex].files.filter(
+      item => item.uid !== file.uid
+  )
+}
+
+const formatContentWithImages = (content: string, files: UploadFile[]) => {
+  if (!content && files.length === 0) return ''
+
+  let formatted = content
+  files.forEach(file => {
+    // Only add space before image if there's existing content
+    if (formatted) formatted += ' '
+    formatted += `<img src='${file.name}'/>`
+  })
+  return formatted
 }
 
 const validateForm = () => {
@@ -115,8 +153,10 @@ const validateForm = () => {
   }
 
   if (isChoiceType.value) {
-    if (formData.options.length < 2 || formData.options.some(opt => !opt)) {
-      ElMessage.error('至少两个选项，且内容不能为空')
+    if (formData.options.length < 2 || formData.options.some(opt =>
+        !opt.content && opt.files.length === 0
+    )) {
+      ElMessage.error('至少两个选项，且内容或图片不能为空')
       return false
     }
     if (formData.questionType === 'single' && !formData.answer) {
@@ -137,35 +177,58 @@ const validateForm = () => {
 
 const resetForm = () => {
   formData.question = ''
+  formData.questionFiles = []
   formData.subject = ''
   knowledgeInput.value = ''
   formData.answer = ''
-  formData.options = ['', '']
+  formData.options = [
+    { content: '', files: [] },
+    { content: '', files: [] }
+  ]
   formData.knowledge_point = []
   formData.analysis = ''
   formData.difficulty = 3
-  files.value = []
 }
-
 
 const handleSubmit = async () => {
   if (!validateForm()) return
 
-  const fileList = files.value.map(file => file.raw as File)
+  // Format question with images
+  const formattedQuestion = formatContentWithImages(
+      formData.question,
+      formData.questionFiles
+  )
+
+  // Format options with IDs (A, B, C, etc.)
+  const formattedOptions = formData.options.map((option, index) => {
+    const optionId = String.fromCharCode(65 + index) // A, B, C, etc.
+    return {
+      content: formatContentWithImages(option.content, option.files),
+      _id: optionId // 确保包含 _id 字段
+    }
+  })
+
+  // Collect all files to upload
+  const allFiles: File[] = []
+  formData.questionFiles.forEach(file => {
+    if (file.raw) allFiles.push(file.raw)
+  })
+  formData.options.forEach(option => {
+    option.files.forEach(file => {
+      if (file.raw) allFiles.push(file.raw)
+    })
+  })
 
   const payload = {
-    content: formData.question,
+    content: formattedQuestion,
     answer: Array.isArray(formData.answer) ? formData.answer : [formData.answer],
-    options: formData.options.map((content, index) => ({
-      id: String.fromCharCode(65 + index),
-      content
-    })),
+    options: formattedOptions, // 这里应该已经包含了 _id 字段
     type: QUESTION_TYPE_LABELS[formData.questionType],
     subject: formData.subject,
     knowledge_point: formData.knowledge_point,
     order: true,
     check_type: 1,
-    attachments: fileList.map(file => file.name),  // ✨ 提取文件名作为附件
+    attachments: allFiles.map(file => file.name),
     difficulty: formData.difficulty
   }
 
@@ -174,8 +237,8 @@ const handleSubmit = async () => {
     const response = await addExercise(payload)
 
     // 2. 提交文件内容（如果有）
-    if (fileList.length > 0) {
-      await addExerciseAttachments(response.data.id, fileList)
+    if (allFiles.length > 0) {
+      await addExerciseAttachments(response.data.id, allFiles)
     }
 
     ElMessage.success('题目添加成功')
@@ -186,8 +249,6 @@ const handleSubmit = async () => {
     ElMessage.error('题目添加失败')
   }
 }
-
-
 
 defineExpose({
   submit: handleSubmit,
@@ -217,18 +278,51 @@ defineExpose({
     <!-- 题目内容 -->
     <el-form-item label="题目内容" prop="question" required>
       <el-input v-model="formData.question" type="textarea" :rows="3" />
+      <div class="upload-container">
+        <el-upload
+            :file-list="formData.questionFiles"
+            :auto-upload="false"
+            :before-upload="beforeUpload"
+            :on-remove="removeQuestionFile"
+            :on-change="handleQuestionFileChange"
+            :http-request="() => {}"
+            multiple
+            accept="image/*"
+        >
+          <el-button type="primary">添加题目图片</el-button>
+          <template #tip>
+            <div class="el-upload__tip">可上传多个图片 (JPEG, PNG, GIF)，每个不超过10MB</div>
+          </template>
+        </el-upload>
+      </div>
     </el-form-item>
 
     <!-- 选择题选项 -->
     <el-form-item v-if="isChoiceType" label="选项" required>
       <div v-for="(option, index) in formData.options" :key="index" class="option-item">
-        <el-input v-model="formData.options[index]" style="width: 80%" />
-        <el-button
-            type="danger"
-            circle
-            :icon="Delete"
-            @click="removeOption(index)"
-        />
+        <div class="option-content">
+          <el-input v-model="option.content" style="width: 80%" :placeholder="`选项 ${String.fromCharCode(65 + index)}`" />
+          <el-button
+              type="danger"
+              circle
+              :icon="Delete"
+              @click="removeOption(index)"
+          />
+        </div>
+        <div class="option-upload">
+          <el-upload
+              :file-list="option.files"
+              :auto-upload="false"
+              :before-upload="beforeUpload"
+              :on-remove="(file) => removeOptionFile(index, file)"
+              :on-change="(file, files) => handleOptionFileChange(index, file, files)"
+              :http-request="() => {}"
+              multiple
+              accept="image/*"
+          >
+            <el-button size="small" type="primary">添加选项图片</el-button>
+          </el-upload>
+        </div>
       </div>
       <el-button type="primary" @click="addOption">添加选项</el-button>
     </el-form-item>
@@ -289,37 +383,32 @@ defineExpose({
     <el-form-item label="难度">
       <el-rate v-model="formData.difficulty" :max="5" />
     </el-form-item>
-
-    <!-- 附件上传 -->
-    <el-form-item label="附件">
-      <el-upload
-          :file-list="files"
-          :auto-upload="false"
-          :before-upload="beforeUpload"
-          :on-remove="handleRemove"
-          :on-change="handleChange"
-          :http-request="() => {}"
-      multiple
-      >
-
-
-        <el-button type="primary">选择文件</el-button>
-        <template #tip>
-          <div class="el-upload__tip">可上传多个附件，每个不超过10MB</div>
-        </template>
-      </el-upload>
-    </el-form-item>
   </el-form>
 </template>
 
 <style scoped>
 .option-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #eee;
+  padding: 10px;
+  border-radius: 4px;
 }
 
-.option-item .el-button {
+.option-content {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.option-content .el-button {
   margin-left: 10px;
+}
+
+.option-upload {
+  margin-left: 20px;
+}
+
+.upload-container {
+  margin-top: 10px;
 }
 </style>

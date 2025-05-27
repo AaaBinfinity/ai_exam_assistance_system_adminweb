@@ -1,13 +1,32 @@
 <script setup lang="ts">
-import { useRoute } from 'vue-router';
-import Navbar from '@/components/Navbar.vue';
-import UserInfo from '@/components/UserInfo.vue';
-import Footer from '@/components/Footer.vue'; // 引入 Footer
+// App.vue <script setup>
+import { ref } from 'vue'
+import { useRoute } from 'vue-router'
+import Navbar from '@/components/Navbar.vue'
+import UserInfo from '@/components/UserInfo.vue'
+import Footer from '@/components/Footer.vue'
+import { useWebSocket } from '@/composables/useWebSocket'
+import MessagePopup from '@/components/MessagePopup.vue'
 
-const route = useRoute();
+const route = useRoute()
+const message = ref('')
+const popupVisible = ref(false)
+
+useWebSocket((msg: string) => {
+  message.value = msg
+  popupVisible.value = true
+})
+
+const closePopup = () => {
+  popupVisible.value = false
+}
+
 </script>
 
 <template>
+
+
+
   <div class="app-container">
     <!-- 顶部导航栏 -->
     <Navbar v-if="!route.meta.hideNavbar">
@@ -22,6 +41,13 @@ const route = useRoute();
     <!-- 页脚 -->
     <Footer />
   </div>
+
+
+  <MessagePopup
+      :message="message"
+      :visible="popupVisible"
+      @update:visible="popupVisible = $event"
+  />
 </template>
 
 <style scoped lang="scss">
