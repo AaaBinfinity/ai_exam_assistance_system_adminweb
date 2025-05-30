@@ -1,20 +1,28 @@
 <template>
   <footer class="footer">
     <div class="footer-content">
-      <span>© 2025 AI考学宝 · 保留所有权利</span>
+      <small>© 2025 {{ siteName }} · 保留所有权利</small>
       <span class="divider">|</span>
-      <a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">
-        辽ICP备20250101号-1
+      <a
+          href="https://beian.miit.gov.cn/"
+          target="_blank"
+          rel="noopener noreferrer"
+      >
+        {{ icpNo }}
       </a>
     </div>
   </footer>
 </template>
 
+<script setup lang="ts">
+const siteName = import.meta.env.VITE_SITE_NAME || '???';
+const icpNo = import.meta.env.VITE_ICP_NO || '未备案';
+</script>
+
 <style scoped lang="scss">
 .footer {
-  width: 100%;
-  padding: 8px 20px;
-  font-size: 12px;
+  padding: 12px 20px;
+  font-size: 13px;
   color: #888;
   background-color: #fff;
   border-top: 1px solid #eee;
@@ -25,6 +33,7 @@
     align-items: center;
     gap: 8px;
     flex-wrap: wrap;
+    text-align: center;
 
     .divider {
       color: #ccc;
@@ -35,9 +44,13 @@
       text-decoration: none;
 
       &:hover {
-        color: #409EFF;
+        color: #409eff;
         text-decoration: underline;
       }
+    }
+
+    small {
+      font-size: 13px;
     }
   }
 }

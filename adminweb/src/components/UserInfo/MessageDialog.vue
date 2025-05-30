@@ -146,7 +146,8 @@ watch(activeTab, () => {
               :total="total"
               :page-size="size"
               :current-page="page"
-              @current-change="val => { page.value = val; fetchMessages(); }"
+              @current-change="val => { page = val; fetchMessages(); }"
+
           />
         </div>
       </el-skeleton>

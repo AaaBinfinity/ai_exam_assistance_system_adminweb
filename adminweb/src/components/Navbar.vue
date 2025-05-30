@@ -1,17 +1,21 @@
 <script setup lang="ts">
 import NavItem from './Navbar/NavItem.vue';
+
+const siteName = import.meta.env.VITE_SITE_NAME || 'AI考学宝';
+const logoUrl = import.meta.env.VITE_LOGO_URL || '/logo.png';
 </script>
 
 <template>
   <div class="navbar">
     <div class="navbar-left">
       <div class="logo">
-        AI 考学宝
+        <img :src="logoUrl" alt="logo" class="logo-img" />
+        <span class="logo-text">{{ siteName }}</span>
       </div>
       <nav class="nav-links">
-        <NavItem to="/dashboard" label="数据面板"/>
-        <NavItem to="/users_manager" label="用户管理" exact/>
-        <NavItem to="/exercise_manager" label="题库管理" exact/>
+        <NavItem to="/dashboard" label="数据面板" />
+        <NavItem to="/users_manager" label="用户管理" exact />
+        <NavItem to="/exercise_manager" label="题库管理" exact />
       </nav>
     </div>
 
@@ -20,6 +24,7 @@ import NavItem from './Navbar/NavItem.vue';
     </div>
   </div>
 </template>
+
 
 <style scoped lang="scss">
 .navbar {
@@ -36,9 +41,22 @@ import NavItem from './Navbar/NavItem.vue';
     align-items: center;
 
     .logo {
-      font-weight: bold;
-      font-size: 18px;
+      display: flex;
+      align-items: center;
       margin-right: 24px;
+
+      .logo-img {
+        height: 32px;
+        width: 32px;
+        object-fit: contain;
+        margin-right: 8px;
+      }
+
+      .logo-text {
+        font-weight: bold;
+        font-size: 18px;
+        color: #333;
+      }
     }
 
     .nav-links {

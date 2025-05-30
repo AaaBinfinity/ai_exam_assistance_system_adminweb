@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ElBadge } from 'element-plus';
-import { Message } from '@element-plus/icons-vue'; // ✅ 必须引入
+import { Message } from '@element-plus/icons-vue';
 
 const props = defineProps({
   unreadCount: {

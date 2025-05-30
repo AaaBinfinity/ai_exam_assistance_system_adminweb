@@ -31,11 +31,13 @@ onMounted(() => {
  */
 const fetchUnreadMessages = async () => {
   try {
-    const response = await getInboxMessages(0, 5);
+    const response = await getInboxMessages(0, 99);
     if (response.data && response.data.content) {
       messages.value = response.data.content;
       unreadCount.value = messages.value.filter(msg => !msg.isRead).length;
     }
+    console.log('传入 unreadCount:', unreadCount);
+
   } catch (error) {
     console.error('获取消息失败:', error);
   }
