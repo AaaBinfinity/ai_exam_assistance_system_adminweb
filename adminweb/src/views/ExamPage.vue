@@ -13,7 +13,9 @@
         :total-questions="questions.length"
         @prev="prevQuestion"
         @next="nextQuestion"
+        @update:question="updateCurrentQuestion"
     />
+
   </div>
 </template>
 
@@ -25,20 +27,24 @@ import { getExamQuestions } from '@/api/exam/exam'
 import { checkAnswers, batchSubmitAnswers } from '@/api/exam/submit'
 import ExamHeader from '@/components/Exam/ExamHeader.vue'
 import QuestionCard from '@/components/Exam/QuestionCard.vue'
+import { toRaw } from 'vue'
 
-// 接口定义
+
+
 interface Option {
-  content: string
   id: string
+  content: string
 }
 
 interface Question {
   id?: string
-  type: string
+  type: '单选题' | '多选题' | '判断题' | '填空题' | '简答题'
   content: string
   options: Option[]
   userAnswer?: string | string[]
   answerTime?: number
+  correctAnswer?: string | string[]
+  isCorrect?: boolean
 }
 
 interface TypeOption {
@@ -46,7 +52,6 @@ interface TypeOption {
   count: number
 }
 
-// 路由 & 数据
 const route = useRoute()
 const router = useRouter()
 const subject = ref('')
@@ -57,12 +62,12 @@ const timeLeft = ref(0)
 const timer = ref<NodeJS.Timeout>()
 const currentIndex = ref(0)
 const perQuestionStartTime = ref<number>(Date.now())
+
 const studentId = ref('123')
 const examId = ref('E1')
 
 const currentQuestion = computed(() => questions.value[currentIndex.value] || null)
 
-// 初始化
 onMounted(() => {
   subject.value = route.query.subject as string || ''
   selectedTypes.value = JSON.parse(route.query.types as string || '[]')
@@ -72,13 +77,27 @@ onMounted(() => {
   loadQuestions()
   startTimer()
 })
+function updateCurrentQuestion(newQuestion: Question) {
+  console.log('[接收到题目更新]', newQuestion)
+
+  if (Array.isArray(newQuestion.userAnswer)) {
+    newQuestion.userAnswer = [...toRaw(newQuestion.userAnswer)]
+  }
+
+  console.log('[处理后的 userAnswer]', newQuestion.userAnswer)
+
+  // 更新题目数组
+  questions.value[currentIndex.value] = newQuestion
+}
 
 function recordCurrentQuestionTime() {
   const now = Date.now()
   const duration = Math.floor((now - perQuestionStartTime.value) / 1000)
   const current = questions.value[currentIndex.value]
+
   if (current) {
     current.answerTime = (current.answerTime || 0) + duration
+    console.log(`[记录答题时间] 第${currentIndex.value + 1}题 (${current.type}) userAnswer:`, current.userAnswer)
   }
   perQuestionStartTime.value = now
 }
@@ -163,6 +182,12 @@ async function submitExam(isAuto = false) {
   stopTimer()
 
   try {
+    // ✅ 日志输出：答题内容
+    console.log('[提交考试] 当前所有答题记录：')
+    questions.value.forEach((q, idx) => {
+      console.log(`第${idx + 1}题（${q.type}）：`, q.userAnswer)
+    })
+
     const timestamp = Date.now()
     const submissionData = questions.value.map(q => ({
       studentId: studentId.value,
@@ -194,7 +219,9 @@ async function submitExam(isAuto = false) {
       timeUsed: examDuration.value * 60 - timeLeft.value,
       questions: questions.value.map((q, index) => {
         const isCorrect = compareAnswers(q.userAnswer, correctAnswers[index])
+        console.log("对不对？"+isCorrect)
         if (isCorrect) correctCount++
+        console.log("correctCountcorrectCountcorrectCountcorrectCount="+correctCount)
 
         return {
           ...q,
@@ -216,70 +243,57 @@ async function submitExam(isAuto = false) {
   }
 }
 
-function compareAnswers(userAnswer: any, correctAnswer: any): boolean {
-  const question = questions.value[currentIndex.value]
-  console.log('User Answers:', userAnswer)
-  console.log('Correct Answers:', correctAnswer)
-  if (userAnswer === undefined || userAnswer === null ||
-      (Array.isArray(userAnswer) && userAnswer.length === 0)) {
-    return false
+function compareAnswers(userAnswer: any, correctAnswer: string[]): boolean {
+  if (!correctAnswer || correctAnswer.length === 0) return false;
+
+  const normalizeAnswer = (ans: any): string[] => {
+    if (Array.isArray(ans)) {
+      return ans.map(item => String(item).trim().toUpperCase()).filter(Boolean);
+    }
+    if (typeof ans === 'string') {
+      return ans.split(/[,，\s]+/).map(item => item.trim().toUpperCase()).filter(Boolean);
+    }
+    return [];
   }
 
-  if (question.type === '判断题') {
-    const userChoice = userAnswer === 'A' ? '正确' :
-        userAnswer === 'B' ? '错误' :
-            userAnswer
+  const userAnswers = normalizeAnswer(userAnswer)
+  const normalizedCorrect = normalizeAnswer(correctAnswer)
 
-    const correct = Array.isArray(correctAnswer) ?
-        correctAnswer[0] :
-        correctAnswer
-
-    return userChoice === correct
+  console.log(`[答案比对] 题型: ${currentQuestion.value?.type}`)
+  console.log('用户答案字符串:', JSON.stringify(userAnswers))
+  console.log('正确答案字符串:', JSON.stringify(normalizedCorrect))
+  if (currentQuestion.value?.type === '判断题') {
+    const userChoice = userAnswers[0] === 'A' ? '正确' : userAnswers[0] === 'B' ? '错误' : userAnswers[0]
+    return userChoice === normalizedCorrect[0]
   }
 
-  if (question.type === '多选题') {
-    let userAnswers: string[] = []
-    if (Array.isArray(userAnswer)) {
-      userAnswers = userAnswer.map(a => String(a).trim().toUpperCase())
-    } else if (typeof userAnswer === 'string') {
-      userAnswers = userAnswer.split(/[,，\s]+/)
-          .map(a => a.trim().toUpperCase())
-          .filter(a => /^[A-Z]$/.test(a))
-    }
+  if (currentQuestion.value?.type === '多选题') {
+    console.log('确认进入多选题分支');
+    console.log('userAnswers 类型:', Object.prototype.toString.call(userAnswers));
+    console.log('normalizedCorrect 类型:', Object.prototype.toString.call(normalizedCorrect));
+    console.log('userAnswers 内容:', [...userAnswers]);
+    console.log('normalizedCorrect 内容:', [...normalizedCorrect]);
+    console.log('用户答案 Set:', new Set(userAnswers)); // 检查 Set 内容
+    console.log('正确答案 Set:', new Set(normalizedCorrect));
+    console.log('A 是否存在:', new Set(normalizedCorrect).has('A')); // 应返回 true
 
-    let correctAnswers: string[] = []
-    if (Array.isArray(correctAnswer)) {
-      correctAnswers = correctAnswer.map(a =>
-          typeof a === 'string' ? a.trim().toUpperCase() : String(a).trim().toUpperCase()
-      )
-    } else if (typeof correctAnswer === 'string') {
-      correctAnswers = correctAnswer.split(/[,，\s]+/)
-          .map(a => a.trim().toUpperCase())
-          .filter(a => /^[A-Z]$/.test(a))
-    }
-
-    if (userAnswers.length !== correctAnswers.length) {
-      return false
-    }
-
-    return JSON.stringify(userAnswers.sort()) ===
-        JSON.stringify(correctAnswers.sort())
+    const userSet = new Set(userAnswers);
+    const correctSet = new Set(normalizedCorrect);
+    return (
+        userAnswers.length === normalizedCorrect.length &&
+        userAnswers.every(ans => correctSet.has(ans))
+    );
   }
 
-  const user = Array.isArray(userAnswer) ?
-      userAnswer[0]?.trim().toUpperCase() :
-      String(userAnswer).trim().toUpperCase()
-  const correct = Array.isArray(correctAnswer) ?
-      correctAnswer[0]?.trim().toUpperCase() :
-      String(correctAnswer).trim().toUpperCase()
-
-  return user === correct
+  return userAnswers[0] === normalizedCorrect[0]
 }
 
+console.log(compareAnswers)
 onUnmounted(() => {
   stopTimer()
 })
 </script>
+
 
 <style scoped>
 .exam-question-list {

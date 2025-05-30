@@ -98,7 +98,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 
 const props = defineProps({
   question: {
@@ -127,12 +127,58 @@ const emit = defineEmits(['prev', 'next', 'update:question'])
 const isFirst = computed(() => props.currentIndex === 0)
 const isLast = computed(() => props.currentIndex === props.totalQuestions - 1)
 
+// 初始化多选题答案格式
 if (props.question.type === '多选题' && !Array.isArray(props.question.userAnswer)) {
+  console.log('[Init] 多选题 userAnswer 非数组，初始化为空数组')
   emit('update:question', {
     ...props.question,
     userAnswer: []
   })
 }
+
+// 使用本地响应式变量来管理多选题答案
+const localAnswer = computed({
+  get() {
+    if (props.question.type === '多选题') {
+      const currentAnswer = Array.isArray(props.question.userAnswer)
+          ? [...props.question.userAnswer]
+          : []
+      console.log('[Getter] 多选题 userAnswer =', currentAnswer)
+      return currentAnswer
+    }
+    console.log('[Getter] 非多选题 userAnswer =', props.question.userAnswer)
+    return props.question.userAnswer
+  },
+  set(value) {
+    if (props.question.type === '多选题') {
+      const pureArray = Array.isArray(value) ? [...value] : []
+      console.log('[Setter] 多选题设置 userAnswer =', pureArray)
+      emit('update:question', {
+        ...props.question,
+        userAnswer: pureArray
+      })
+    } else {
+      console.log('[Setter] 非多选题设置 userAnswer =', value)
+      emit('update:question', {
+        ...props.question,
+        userAnswer: value
+      })
+    }
+  }
+})
+
+// 监听question变化，确保多选题答案格式正确
+watch(() => props.question, (newQuestion) => {
+  if (newQuestion.type === '多选题' && !Array.isArray(newQuestion.userAnswer)) {
+    console.log('[Watch] 多选题 userAnswer 非数组，自动修正为 []')
+    emit('update:question', {
+      ...newQuestion,
+      userAnswer: []
+    })
+  } else {
+    console.log('[Watch] 题目变化：', newQuestion)
+  }
+}, { deep: true })
 
 function renderQuestionContent(question: any): string {
   const content = question.content
@@ -149,13 +195,18 @@ function renderQuestionContent(question: any): string {
 }
 
 function handleNext() {
-  // 确保多选题的 userAnswer 是数组
-  if (props.question.type === '多选题' && !Array.isArray(props.question.userAnswer)) {
+  if (props.question.type === '多选题') {
+    const pureArray = Array.isArray(props.question.userAnswer)
+        ? [...props.question.userAnswer]
+        : []
+    console.log('[handleNext] 多选题最终 userAnswer =', pureArray)
+
     emit('update:question', {
       ...props.question,
-      userAnswer: []
+      userAnswer: pureArray
     })
   }
+
   emit('next')
 }
 </script>

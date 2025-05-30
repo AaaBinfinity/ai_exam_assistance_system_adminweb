@@ -7,12 +7,17 @@
         <p>正确率: {{ calculateCorrectRate() }}%</p>
       </div>
 
-      <div v-for="(q, index) in result.questions" :key="index" class="question-result">
-        <h3>题目 {{ index + 1 }} ({{ q.type }})</h3>
+      <div v-for="(q, index) in result.questions" :key="index" class="question-result" :class="{'correct': q.isCorrect, 'incorrect': !q.isCorrect}">
+        <div class="question-header">
+          <h3>题目 {{ index + 1 }} ({{ q.type }})</h3>
+          <el-tag :type="q.isCorrect ? 'success' : 'danger'" size="small">
+            {{ q.isCorrect ? '正确' : '错误' }}
+          </el-tag>
+        </div>
 
         <div v-html="renderQuestionContent(q)"></div>
-        <p>你的答案: {{ formatUserAnswer(q.userAnswer) }}</p>
-        <p>正确答案: {{ q.correctAnswer }}</p>
+        <p>你的答案: <span :class="{'correct-answer': q.isCorrect, 'wrong-answer': !q.isCorrect}">{{ formatUserAnswer(q.userAnswer) }}</span></p>
+        <p>正确答案: {{ formatUserAnswer(q.correctAnswer) }}</p>
         <p>用时: {{ q.answerTime }}秒</p>
       </div>
     </el-card>
@@ -48,14 +53,8 @@ function formatTime(seconds: number) {
 }
 
 function calculateCorrectRate() {
-  const correct = result.value.questions.filter(q => {
-    if (Array.isArray(q.userAnswer)) {
-      return q.userAnswer.join('|') === q.correctAnswer
-    }
-    return q.userAnswer === q.correctAnswer
-  }).length
-
-  return Math.round((correct / result.value.questions.length) * 100)
+  const correctCount = result.value.questions.filter(q => q.isCorrect).length;
+  return Math.round((correctCount / result.value.questions.length) * 100);
 }
 
 function formatUserAnswer(answer: string | string[]) {
@@ -66,3 +65,38 @@ function renderQuestionContent(question: any) {
   // Similar to your existing render function
 }
 </script>
+
+<style scoped>
+.question-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.correct {
+  border-left: 4px solid #67c23a;
+  padding-left: 10px;
+}
+
+.incorrect {
+  border-left: 4px solid #f56c6c;
+  padding-left: 10px;
+}
+
+.correct-answer {
+  color: #67c23a;
+  font-weight: bold;
+}
+
+.wrong-answer {
+  color: #f56c6c;
+  font-weight: bold;
+}
+
+.question-result {
+  margin-bottom: 20px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  border-radius: 4px;
+}
+</style>
