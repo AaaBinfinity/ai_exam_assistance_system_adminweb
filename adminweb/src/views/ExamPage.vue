@@ -12,26 +12,22 @@
       </div>
     </el-card>
 
-    <el-card
-        v-for="(question, index) in questions"
-        :key="question.id || index"
-        class="mb-4"
-    >
+    <el-card v-if="currentQuestion" class="mb-4">
       <div class="question-header">
-        <b>题目 {{ index + 1 }}（{{ question.type }}）</b>
+        <b>题目 {{ currentIndex + 1 }} / {{ questions.length }}（{{ currentQuestion.type }}）</b>
       </div>
 
       <div class="question-content mb-2">
-        <span v-html="renderQuestionContent(question, index)"></span>
+        <span v-html="renderQuestionContent(currentQuestion, currentIndex)"></span>
       </div>
 
       <!-- 单选题 / 判断题 -->
       <el-radio-group
-          v-if="question.type === '单选题' || question.type === '判断题'"
-          v-model="question.userAnswer"
+          v-if="currentQuestion.type === '单选题' || currentQuestion.type === '判断题'"
+          v-model="currentQuestion.userAnswer"
       >
         <el-radio
-            v-for="(opt, idx) in question.options"
+            v-for="(opt, idx) in currentQuestion.options"
             :key="idx"
             :label="opt.content"
         >
@@ -41,20 +37,33 @@
 
       <!-- 多选题 -->
       <el-checkbox-group
-          v-else-if="question.type === '多选题'"
-          v-model="question.userAnswer"
+          v-else-if="currentQuestion.type === '多选题'"
+          v-model="currentQuestion.userAnswer"
       >
         <el-checkbox
-            v-for="(opt, idx) in question.options"
+            v-for="(opt, idx) in currentQuestion.options"
             :key="idx"
             :label="opt.content"
         >
           {{ opt.content }}
         </el-checkbox>
       </el-checkbox-group>
+
+      <!-- 可扩展：填空题输入框 -->
+
+      <div class="question-navigation mt-4 text-right">
+        <el-button @click="prevQuestion" :disabled="currentIndex === 0">上一题</el-button>
+        <el-button
+            type="primary"
+            @click="nextQuestion"
+        >
+          {{ currentIndex === questions.length - 1 ? '提交试卷' : '下一题' }}
+        </el-button>
+      </div>
     </el-card>
   </div>
 </template>
+
 
 
 <script setup lang="ts">
@@ -94,6 +103,24 @@ const questions = ref<Question[]>([])
 const examDuration = ref(30) // 默认30分钟
 const timeLeft = ref(0) // 剩余秒数
 const timer = ref<NodeJS.Timeout>()
+const currentIndex = ref(0)
+const currentQuestion = computed(() => questions.value[currentIndex.value] || null)
+
+// 上一题
+function prevQuestion() {
+  if (currentIndex.value > 0) {
+    currentIndex.value--
+  }
+}
+
+// 下一题或提交
+function nextQuestion() {
+  if (currentIndex.value < questions.value.length - 1) {
+    currentIndex.value++
+  } else {
+    handleManualSubmit()
+  }
+}
 
 // 初始化：获取参数并加载题目
 onMounted(() => {
