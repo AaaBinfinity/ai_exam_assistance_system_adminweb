@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import { getToken } from '@/utils/auth';
-
+import type { Exercise } from './types'
 const routes: RouteRecordRaw[] = [
     {
         path: '/',
@@ -19,6 +19,11 @@ const routes: RouteRecordRaw[] = [
         name: 'Register',
         meta: { hideNavbar: true },
         component: () => import('@/views/Register.vue'),  // 懒加载组件
+    },
+    {
+        path: '/exercise_manager',
+        name: 'ExerciseManager',
+        component: () => import('@/views/ExerciseManager.vue'),
     },
     {
         path: '/profile',
@@ -45,8 +50,13 @@ const routes: RouteRecordRaw[] = [
         name: 'ExamPage',
         component: () => import('@/views/ExamPage.vue'),
         meta: {
-            hideNavbar: true  // ✅ 不显示导航栏
+            hideNavbar: true
         }
+    },
+    {
+        path: '/exam/result',
+        name: 'ExamResult',
+        component: () => import('@/views/ExamResult.vue')
     }
 
 

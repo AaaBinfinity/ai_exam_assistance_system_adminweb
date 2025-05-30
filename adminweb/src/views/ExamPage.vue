@@ -32,12 +32,13 @@
         <el-radio
             v-for="(opt, idx) in currentQuestion.options"
             :key="idx"
-            :label="opt.content"
+            :label="String.fromCharCode(65 + idx)"
         >
-          {{ opt.content }}
+        {{ opt.content }}
         </el-radio>
       </el-radio-group>
 
+      <!-- 多选题 -->
       <!-- 多选题 -->
       <el-checkbox-group
           v-else-if="currentQuestion.type === '多选题'"
@@ -46,9 +47,9 @@
         <el-checkbox
             v-for="(opt, idx) in currentQuestion.options"
             :key="idx"
-            :label="opt.content"
+            :label="String.fromCharCode(65 + idx)"
         >
-          {{ opt.content }}
+        {{ opt.content }}
         </el-checkbox>
       </el-checkbox-group>
 
@@ -74,6 +75,8 @@ import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getExamQuestions } from '@/api/exam/exam'
+import { checkAnswers, batchSubmitAnswers } from '@/api/exam/submit'
+import { useRouter } from 'vue-router'
 
 // 接口定义
 interface Option {
@@ -110,7 +113,9 @@ const timer = ref<NodeJS.Timeout>()
 const currentIndex = ref(0)
 const currentQuestion = computed(() => questions.value[currentIndex.value] || null)
 const perQuestionStartTime = ref<number>(Date.now())
-
+const router = useRouter()
+const studentId = ref('123')    // 应从用户登录信息中获取
+const examId = ref('E1')        // 当前考试 ID，也应从上下文或路由中获取
 
 // 初始化：获取参数并加载题目
 onMounted(() => {
@@ -147,8 +152,6 @@ function nextQuestion() {
     handleManualSubmit()
   }
 }
-
-
 
 // 加载题目
 async function loadQuestions() {
@@ -260,35 +263,111 @@ function handleManualSubmit() {
   submitExam(false)
 }
 
-// 提交试卷
-function submitExam(isAuto = false) {
+async function submitExam(isAuto = false) {
   recordCurrentQuestionTime()
   stopTimer()
-  console.log('答卷结果：', questions.value)
-  ElMessage.success(isAuto ? '系统已自动提交试卷' : '提交成功')
-  // router.push({ name: 'ExamResult' })
+
+  try {
+    const timestamp = Date.now()
+    const submissionData = questions.value.map(q => ({
+      studentId: studentId.value,
+      questionId: q.id,
+      examId: examId.value,
+      timestamp,
+      answerType: 'FuzzyAnswer',
+      duration: q.answerTime || 0,
+      rightAnswer: '',
+      answer: Array.isArray(q.userAnswer)
+          ? q.userAnswer.join(',')
+          : q.userAnswer || ''
+    }))
+
+    await batchSubmitAnswers(submissionData)
+
+    const questionIds = questions.value.map(q => q.id || '')
+    const checkResponse = await checkAnswers(questionIds)
+
+    // Process the check response to flatten and format correctly
+    const correctAnswers = checkResponse.data.map((answerArray: any[]) => {
+      // For single-item arrays, return the first element
+      if (answerArray.length === 1) return answerArray[0]
+      // For multiple items, return as array
+      return answerArray
+    })
+
+    // Prepare exam results with scoring
+    let correctCount = 0
+    const examResults = {
+      subject: subject.value,
+      totalQuestions: questions.value.length,
+      timeUsed: examDuration.value * 60 - timeLeft.value,
+      questions: questions.value.map((q, index) => {
+        const isCorrect = compareAnswers(q.userAnswer, correctAnswers[index])
+        if (isCorrect) correctCount++
+
+        return {
+          ...q,
+          correctAnswer: correctAnswers[index],
+          isCorrect
+        }
+      }),
+      score: Math.round((correctCount / questions.value.length) * 100)
+    }
+
+    localStorage.setItem('examResults', JSON.stringify(examResults))
+
+    ElMessage.success(isAuto ? '系统已自动提交试卷' : '提交成功')
+    router.push({ name: 'ExamResult' })
+  } catch (err) {
+    ElMessage.error('提交试卷失败，请稍后重试')
+    console.error('提交失败:', err)
+    // Optionally restart timer if submission fails
+    if (timeLeft.value > 0) startTimer()
+  }
 }
+
+function compareAnswers(userAnswer: any, correctAnswer: any): boolean {
+  const question = questions.value[currentIndex.value]
+
+  if (question.type === '多选题') {
+    const userAnswers = Array.isArray(userAnswer)
+        ? userAnswer
+        : typeof userAnswer === 'string'
+            ? userAnswer.split(',').map(a => a.trim())
+            : []
+
+    const correctAnswers = Array.isArray(correctAnswer)
+        ? correctAnswer
+        : []
+
+    const sortAndDedup = (arr: string[]) =>
+        Array.from(new Set(arr.map(a => a.trim()))).sort()
+
+    return (
+        sortAndDedup(userAnswers).join() === sortAndDedup(correctAnswers).join()
+    )
+  }
+
+  if (question.type === '判断题') {
+    const mapping: Record<string, string> = {
+      A: '正确',
+      B: '错误'
+    }
+    const userVal = mapping[userAnswer] || userAnswer
+    const correctVal = Array.isArray(correctAnswer) ? correctAnswer[0] : correctAnswer
+    return userVal === correctVal
+  }
+
+  // 单选题或其他
+  return userAnswer === (Array.isArray(correctAnswer) ? correctAnswer[0] : correctAnswer)
+}
+
 
 // 组件卸载时停止计时器
 onUnmounted(() => {
   stopTimer()
 })
 </script>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 <style scoped>
 .exam-header {

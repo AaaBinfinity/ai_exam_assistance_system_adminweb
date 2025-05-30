@@ -14,15 +14,3 @@ export function getExamQuestions(subject: string, types: Array<{ type: string; c
     })
 }
 
-/**
- * 核对答案
- * @param questionIds 问题ID数组
- * @returns 正确答案数组
- */
-export function checkAnswers(questionIds: string[]) {
-    return request({
-        url: '/exam/exam-exam/check',
-        method: 'post',
-        data: questionIds
-    })
-}

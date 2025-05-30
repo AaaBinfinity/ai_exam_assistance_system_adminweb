@@ -23,6 +23,19 @@ export function submitAnswer(data: {
 }
 
 /**
+ * 核对答案
+ * @param questionIds 问题ID数组
+ * @returns 正确答案数组
+ */
+export function checkAnswers(questionIds: string[]) {
+    return request({
+        url: '/exam/exam-exam/check',
+        method: 'post',
+        data: questionIds
+    })
+}
+
+/**
  * 批量提交作答信息
  * @param answers 作答数据数组
  * @returns 提交结果

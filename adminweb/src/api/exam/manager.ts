@@ -58,17 +58,13 @@ export function addExercise(
     onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
 ) {
     if (files && files.length > 0) {
-        // 确保 attachments 数组存在
-        if (!question.attachments) {
-            question.attachments = []
-        }
-
-        // 添加新文件名到 attachments 数组
+        const attachments = question.attachments ?? (question.attachments = [])
         files.forEach(file => {
-            if (!question.attachments.includes(file.name)) {
-                question.attachments.push(file.name)
+            if (!attachments.includes(file.name)) {
+                attachments.push(file.name)
             }
         })
+
     }
 
     // 如果没有文件，直接发送 JSON
@@ -84,7 +80,6 @@ export function addExercise(
         })
     }
 
-    // 如果有文件，使用 FormData
     const formData = new FormData()
     formData.append('question', JSON.stringify(question))
     files.forEach(file => formData.append('files', file))
