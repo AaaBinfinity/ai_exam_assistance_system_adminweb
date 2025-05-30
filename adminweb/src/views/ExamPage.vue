@@ -15,11 +15,14 @@
     <el-card v-if="currentQuestion" class="mb-4">
       <div class="question-header">
         <b>题目 {{ currentIndex + 1 }} / {{ questions.length }}（{{ currentQuestion.type }}）</b>
+        该题作答时间：{{ currentQuestion.answerTime || 0 }} 秒
       </div>
 
       <div class="question-content mb-2">
         <span v-html="renderQuestionContent(currentQuestion, currentIndex)"></span>
       </div>
+
+
 
       <!-- 单选题 / 判断题 -->
       <el-radio-group
@@ -84,6 +87,7 @@ interface Question {
   content: string
   options: Option[]
   userAnswer?: string | string[]
+  answerTime?: number // 单位：秒
 }
 
 interface TypeOption {
@@ -105,22 +109,8 @@ const timeLeft = ref(0) // 剩余秒数
 const timer = ref<NodeJS.Timeout>()
 const currentIndex = ref(0)
 const currentQuestion = computed(() => questions.value[currentIndex.value] || null)
+const perQuestionStartTime = ref<number>(Date.now())
 
-// 上一题
-function prevQuestion() {
-  if (currentIndex.value > 0) {
-    currentIndex.value--
-  }
-}
-
-// 下一题或提交
-function nextQuestion() {
-  if (currentIndex.value < questions.value.length - 1) {
-    currentIndex.value++
-  } else {
-    handleManualSubmit()
-  }
-}
 
 // 初始化：获取参数并加载题目
 onMounted(() => {
@@ -128,6 +118,37 @@ onMounted(() => {
   selectedTypes.value = JSON.parse(route.query.types as string || '[]')
   loadQuestions()
 })
+
+
+function recordCurrentQuestionTime() {
+  const now = Date.now()
+  const duration = Math.floor((now - perQuestionStartTime.value) / 1000)
+  const current = questions.value[currentIndex.value]
+  if (current) {
+    current.answerTime = (current.answerTime || 0) + duration
+  }
+  perQuestionStartTime.value = now
+}
+
+// 上一题
+function prevQuestion() {
+  if (currentIndex.value > 0) {
+    recordCurrentQuestionTime()
+    currentIndex.value--
+  }
+}
+
+// 下一题或提交
+function nextQuestion() {
+  recordCurrentQuestionTime()
+  if (currentIndex.value < questions.value.length - 1) {
+    currentIndex.value++
+  } else {
+    handleManualSubmit()
+  }
+}
+
+
 
 // 加载题目
 async function loadQuestions() {
@@ -241,12 +262,12 @@ function handleManualSubmit() {
 
 // 提交试卷
 function submitExam(isAuto = false) {
+  recordCurrentQuestionTime()
   stopTimer()
   console.log('答卷结果：', questions.value)
   ElMessage.success(isAuto ? '系统已自动提交试卷' : '提交成功')
   // router.push({ name: 'ExamResult' })
 }
-
 
 // 组件卸载时停止计时器
 onUnmounted(() => {
