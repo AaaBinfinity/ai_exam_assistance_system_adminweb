@@ -1,82 +1,30 @@
 <template>
   <div class="exam-question-list">
-    <el-card class="exam-header" shadow="hover">
-      <div class="header-content">
-        <div class="exam-info">
-          <div><b>考试科目：</b>{{ subject }}</div>
-          <div class="mt-2"><b>剩余时间：</b>{{ formattedTime }}</div>
-        </div>
-        <div class="exam-actions">
-          <el-button type="primary" @click="handleManualSubmit">提交试卷</el-button>
-        </div>
-      </div>
-    </el-card>
+    <ExamHeader
+        :subject="subject"
+        :time-left="timeLeft"
+        @submit="handleManualSubmit"
+    />
 
-    <el-card v-if="currentQuestion" class="mb-4">
-      <div class="question-header">
-        <b>题目 {{ currentIndex + 1 }} / {{ questions.length }}（{{ currentQuestion.type }}）</b>
-        该题作答时间：{{ currentQuestion.answerTime || 0 }} 秒
-      </div>
-
-      <div class="question-content mb-2">
-        <span v-html="renderQuestionContent(currentQuestion, currentIndex)"></span>
-      </div>
-
-
-
-      <!-- 单选题 / 判断题 -->
-      <el-radio-group
-          v-if="currentQuestion.type === '单选题' || currentQuestion.type === '判断题'"
-          v-model="currentQuestion.userAnswer"
-      >
-        <el-radio
-            v-for="(opt, idx) in currentQuestion.options"
-            :key="idx"
-            :label="String.fromCharCode(65 + idx)"
-        >
-        {{ opt.content }}
-        </el-radio>
-      </el-radio-group>
-
-      <!-- 多选题 -->
-      <!-- 多选题 -->
-      <el-checkbox-group
-          v-else-if="currentQuestion.type === '多选题'"
-          v-model="currentQuestion.userAnswer"
-      >
-        <el-checkbox
-            v-for="(opt, idx) in currentQuestion.options"
-            :key="idx"
-            :label="String.fromCharCode(65 + idx)"
-        >
-        {{ opt.content }}
-        </el-checkbox>
-      </el-checkbox-group>
-
-      <!-- 可扩展：填空题输入框 -->
-
-      <div class="question-navigation mt-4 text-right">
-        <el-button @click="prevQuestion" :disabled="currentIndex === 0">上一题</el-button>
-        <el-button
-            type="primary"
-            @click="nextQuestion"
-        >
-          {{ currentIndex === questions.length - 1 ? '提交试卷' : '下一题' }}
-        </el-button>
-      </div>
-    </el-card>
+    <QuestionCard
+        v-if="currentQuestion"
+        :question="currentQuestion"
+        :current-index="currentIndex"
+        :total-questions="questions.length"
+        @prev="prevQuestion"
+        @next="nextQuestion"
+    />
   </div>
 </template>
 
-
-
 <script setup lang="ts">
 import { ref, onMounted, computed, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getExamQuestions } from '@/api/exam/exam'
 import { checkAnswers, batchSubmitAnswers } from '@/api/exam/submit'
-import { useRouter } from 'vue-router'
+import ExamHeader from '@/components/Exam/ExamHeader.vue'
+import QuestionCard from '@/components/Exam/QuestionCard.vue'
 
 // 接口定义
 interface Option {
@@ -90,40 +38,40 @@ interface Question {
   content: string
   options: Option[]
   userAnswer?: string | string[]
-  answerTime?: number // 单位：秒
+  answerTime?: number
 }
 
 interface TypeOption {
   type: string
   count: number
 }
-interface ExamTimer {
-  hours: number
-  minutes: number
-  seconds: number
-}
+
 // 路由 & 数据
 const route = useRoute()
+const router = useRouter()
 const subject = ref('')
 const selectedTypes = ref<TypeOption[]>([])
 const questions = ref<Question[]>([])
-const examDuration = ref(30) // 默认30分钟
-const timeLeft = ref(0) // 剩余秒数
+const examDuration = ref(30)
+const timeLeft = ref(0)
 const timer = ref<NodeJS.Timeout>()
 const currentIndex = ref(0)
-const currentQuestion = computed(() => questions.value[currentIndex.value] || null)
 const perQuestionStartTime = ref<number>(Date.now())
-const router = useRouter()
-const studentId = ref('123')    // 应从用户登录信息中获取
-const examId = ref('E1')        // 当前考试 ID，也应从上下文或路由中获取
+const studentId = ref('123')
+const examId = ref('E1')
 
-// 初始化：获取参数并加载题目
+const currentQuestion = computed(() => questions.value[currentIndex.value] || null)
+
+// 初始化
 onMounted(() => {
   subject.value = route.query.subject as string || ''
   selectedTypes.value = JSON.parse(route.query.types as string || '[]')
-  loadQuestions()
-})
+  examDuration.value = parseInt(route.query.duration as string) || 30
+  timeLeft.value = examDuration.value * 60
 
+  loadQuestions()
+  startTimer()
+})
 
 function recordCurrentQuestionTime() {
   const now = Date.now()
@@ -135,7 +83,6 @@ function recordCurrentQuestionTime() {
   perQuestionStartTime.value = now
 }
 
-// 上一题
 function prevQuestion() {
   if (currentIndex.value > 0) {
     recordCurrentQuestionTime()
@@ -143,7 +90,6 @@ function prevQuestion() {
   }
 }
 
-// 下一题或提交
 function nextQuestion() {
   recordCurrentQuestionTime()
   if (currentIndex.value < questions.value.length - 1) {
@@ -153,7 +99,6 @@ function nextQuestion() {
   }
 }
 
-// 加载题目
 async function loadQuestions() {
   if (!subject.value) {
     ElMessage.warning('缺少学科参数')
@@ -165,7 +110,7 @@ async function loadQuestions() {
       if (q.type === '填空题') {
         const blankCount = (q.content.match(/\{\{ANSWER\}\}/g) || []).length
         q.userAnswer = Array(blankCount).fill('')
-        q.content = q.content.replace(/\{\{ANSWER\}\}/g, '') // 替换为纯空白
+        q.content = q.content.replace(/\{\{ANSWER\}\}/g, '')
       }
       return q
     })
@@ -174,63 +119,16 @@ async function loadQuestions() {
   }
 }
 
-function renderQuestionContent(question: Question, index?: number): string {
-  const content = question.content
-
-  if (question.type === '判断题') {
-    return content.replace(/\{\{ANSWER\}\}/g, '').replace(/\(\)/g, '')
-  } else {
-    if (content.includes('{{ANSWER}}') && content.includes('()')) {
-      return content.replace(/\{\{ANSWER\}\}/g, '').replace(/\(\)/g, '( &emsp; )')
-    } else {
-      return content.replace(/\{\{ANSWER\}\}/g, '____')
-    }
-  }
-}
-
-
-
-
-// 响应 input-answer 事件（填空题绑定）
-document.addEventListener('input-answer', (e: any) => {
-  const { index, subIndex, value } = e.detail
-  const q = questions.value[index]
-  if (q && Array.isArray(q.userAnswer)) {
-    q.userAnswer[subIndex] = value
-  }
-})
-// 计算格式化时间
-const formattedTime = computed(() => {
-  const hours = Math.floor(timeLeft.value / 3600)
-  const minutes = Math.floor((timeLeft.value % 3600) / 60)
-  const seconds = timeLeft.value % 60
-  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
-})
-
-// 初始化：获取参数并加载题目
-onMounted(() => {
-  subject.value = route.query.subject as string || ''
-  selectedTypes.value = JSON.parse(route.query.types as string || '[]')
-  examDuration.value = parseInt(route.query.duration as string) || 30
-  timeLeft.value = examDuration.value * 60 // 转换为秒
-
-  loadQuestions()
-  startTimer()
-})
-
-// 开始计时器
 function startTimer() {
-  stopTimer() // 先停止已有计时器
+  stopTimer()
 
   timer.value = setInterval(() => {
     timeLeft.value--
 
-    // 最后5分钟提醒
     if (timeLeft.value === 5 * 60) {
       ElMessage.warning('距离考试结束还有5分钟！')
     }
 
-    // 时间到自动提交
     if (timeLeft.value <= 0) {
       stopTimer()
       autoSubmit()
@@ -238,7 +136,6 @@ function startTimer() {
   }, 1000)
 }
 
-// 停止计时器
 function stopTimer() {
   if (timer.value) {
     clearInterval(timer.value)
@@ -246,7 +143,6 @@ function stopTimer() {
   }
 }
 
-// 自动提交
 function autoSubmit() {
   ElMessageBox.confirm('考试时间已结束，系统将自动提交试卷', '提示', {
     confirmButtonText: '确定',
@@ -258,7 +154,6 @@ function autoSubmit() {
   })
 }
 
-// 手动提交按钮事件
 function handleManualSubmit() {
   submitExam(false)
 }
@@ -287,15 +182,11 @@ async function submitExam(isAuto = false) {
     const questionIds = questions.value.map(q => q.id || '')
     const checkResponse = await checkAnswers(questionIds)
 
-    // Process the check response to flatten and format correctly
     const correctAnswers = checkResponse.data.map((answerArray: any[]) => {
-      // For single-item arrays, return the first element
       if (answerArray.length === 1) return answerArray[0]
-      // For multiple items, return as array
       return answerArray
     })
 
-    // Prepare exam results with scoring
     let correctCount = 0
     const examResults = {
       subject: subject.value,
@@ -321,99 +212,77 @@ async function submitExam(isAuto = false) {
   } catch (err) {
     ElMessage.error('提交试卷失败，请稍后重试')
     console.error('提交失败:', err)
-    // Optionally restart timer if submission fails
     if (timeLeft.value > 0) startTimer()
   }
 }
 
 function compareAnswers(userAnswer: any, correctAnswer: any): boolean {
   const question = questions.value[currentIndex.value]
-
-  if (question.type === '多选题') {
-    const userAnswers = Array.isArray(userAnswer)
-        ? userAnswer
-        : typeof userAnswer === 'string'
-            ? userAnswer.split(',').map(a => a.trim())
-            : []
-
-    const correctAnswers = Array.isArray(correctAnswer)
-        ? correctAnswer
-        : []
-
-    const sortAndDedup = (arr: string[]) =>
-        Array.from(new Set(arr.map(a => a.trim()))).sort()
-
-    return (
-        sortAndDedup(userAnswers).join() === sortAndDedup(correctAnswers).join()
-    )
+  console.log('User Answers:', userAnswer)
+  console.log('Correct Answers:', correctAnswer)
+  if (userAnswer === undefined || userAnswer === null ||
+      (Array.isArray(userAnswer) && userAnswer.length === 0)) {
+    return false
   }
 
   if (question.type === '判断题') {
-    const mapping: Record<string, string> = {
-      A: '正确',
-      B: '错误'
-    }
-    const userVal = mapping[userAnswer] || userAnswer
-    const correctVal = Array.isArray(correctAnswer) ? correctAnswer[0] : correctAnswer
-    return userVal === correctVal
+    const userChoice = userAnswer === 'A' ? '正确' :
+        userAnswer === 'B' ? '错误' :
+            userAnswer
+
+    const correct = Array.isArray(correctAnswer) ?
+        correctAnswer[0] :
+        correctAnswer
+
+    return userChoice === correct
   }
 
-  // 单选题或其他
-  return userAnswer === (Array.isArray(correctAnswer) ? correctAnswer[0] : correctAnswer)
+  if (question.type === '多选题') {
+    let userAnswers: string[] = []
+    if (Array.isArray(userAnswer)) {
+      userAnswers = userAnswer.map(a => String(a).trim().toUpperCase())
+    } else if (typeof userAnswer === 'string') {
+      userAnswers = userAnswer.split(/[,，\s]+/)
+          .map(a => a.trim().toUpperCase())
+          .filter(a => /^[A-Z]$/.test(a))
+    }
+
+    let correctAnswers: string[] = []
+    if (Array.isArray(correctAnswer)) {
+      correctAnswers = correctAnswer.map(a =>
+          typeof a === 'string' ? a.trim().toUpperCase() : String(a).trim().toUpperCase()
+      )
+    } else if (typeof correctAnswer === 'string') {
+      correctAnswers = correctAnswer.split(/[,，\s]+/)
+          .map(a => a.trim().toUpperCase())
+          .filter(a => /^[A-Z]$/.test(a))
+    }
+
+    if (userAnswers.length !== correctAnswers.length) {
+      return false
+    }
+
+    return JSON.stringify(userAnswers.sort()) ===
+        JSON.stringify(correctAnswers.sort())
+  }
+
+  const user = Array.isArray(userAnswer) ?
+      userAnswer[0]?.trim().toUpperCase() :
+      String(userAnswer).trim().toUpperCase()
+  const correct = Array.isArray(correctAnswer) ?
+      correctAnswer[0]?.trim().toUpperCase() :
+      String(correctAnswer).trim().toUpperCase()
+
+  return user === correct
 }
 
-
-// 组件卸载时停止计时器
 onUnmounted(() => {
   stopTimer()
 })
 </script>
 
 <style scoped>
-.exam-header {
-  margin-bottom: 20px;
-}
-.header-content {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.exam-info {
-  font-size: 16px;
-}
-.exam-info div {
-  margin-bottom: 8px;
-}
 .exam-question-list {
   padding: 20px;
-}
-.question-header {
-  margin-bottom: 8px;
-  font-size: 16px;
-  font-weight: bold;
-}
-.question-content {
-  margin-bottom: 12px;
-}
-.mb-4 {
-  margin-bottom: 20px;
-}
-.el-radio,
-.el-checkbox {
-  margin-bottom: 8px;
-  display: block;
-}
-.answer-input {
-  display: inline-block;
-  width: 120px;
-  border: none;
-  border-bottom: 1px solid #333;
-  outline: none;
-  margin: 0 4px;
-  font-size: 14px;
-  text-align: center;
-}
-.mt-2 {
-  margin-top: 12px;
 }
 </style>
