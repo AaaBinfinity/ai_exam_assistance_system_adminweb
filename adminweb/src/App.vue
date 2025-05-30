@@ -39,9 +39,9 @@ const closePopup = () => {
     </main>
 
     <!-- 页脚 -->
-    <Navbar v-if="!route.meta.hideNavbar">
-      <Footer />
-    </Navbar>
+    <Footer v-if="!route.meta.hideNavbar">
+
+    </Footer>
 
   </div>
 

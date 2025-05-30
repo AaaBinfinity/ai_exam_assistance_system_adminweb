@@ -22,16 +22,18 @@
               v-model="filterForm.type"
               placeholder="请选择题型"
               clearable
+              :disabled="!filterForm.subject"
               @change="handleFilterChange"
           >
             <el-option
-                v-for="type in TYPE_OPTIONS"
+                v-for="type in typeOptions"
                 :key="type"
                 :label="type"
                 :value="type"
             />
           </el-select>
         </el-form-item>
+
       </el-form>
     </el-card>
 
@@ -83,9 +85,9 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, onMounted } from 'vue'
+import { defineComponent, ref, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getSubjectList } from '@/api/exam/exercise'
+import { getSubjectList, getExerciseTypes } from '@/api/exam/exercise'
 import QuestionAccuracyChart from './question/QuestionAccuracyChart.vue'
 import QuestionAvgScoreChart from './question/QuestionAvgScoreChart.vue'
 import QuestionAvgDurationChart from './question/QuestionAvgDurationChart.vue'
@@ -97,8 +99,6 @@ interface FilterForm {
   subject: string
   type: string
 }
-
-const TYPE_OPTIONS = ['单选题', '多选题', '填空题', '判断题', '简答题']
 
 export default defineComponent({
   name: 'QuestionAnalysis',
@@ -117,7 +117,9 @@ export default defineComponent({
     })
 
     const subjectOptions = ref<string[]>([])
+    const typeOptions = ref<string[]>([])
 
+    // 获取所有科目
     const fetchSubjects = async () => {
       try {
         const res = await getSubjectList()
@@ -126,6 +128,29 @@ export default defineComponent({
         ElMessage.error('获取学科列表失败，请稍后重试')
       }
     }
+
+    // 根据选中的科目获取对应题型
+    const fetchExerciseTypes = async (subject: string) => {
+      try {
+        const res = await getExerciseTypes(subject)
+        typeOptions.value = res.data
+      } catch (error) {
+        ElMessage.error('获取题型列表失败，请稍后重试')
+      }
+    }
+
+    // 监听 subject 变化，动态更新题型列表
+    watch(
+        () => filterForm.value.subject,
+        (newSubject) => {
+          filterForm.value.type = '' // 清空已选题型
+          if (newSubject) {
+            fetchExerciseTypes(newSubject)
+          } else {
+            typeOptions.value = []
+          }
+        }
+    )
 
     const handleFilterChange = () => {
       // 子组件通过 props 响应变化
@@ -138,12 +163,13 @@ export default defineComponent({
     return {
       filterForm,
       subjectOptions,
-      TYPE_OPTIONS,
+      typeOptions,
       handleFilterChange
     }
   }
 })
 </script>
+
 
 <style scoped>
 .question-analysis-container {

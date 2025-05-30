@@ -54,6 +54,16 @@ const routes: RouteRecordRaw[] = [
         }
     },
     {
+        path: '/exam_select',
+        name: 'ExerciseSelection',
+        component: () => import('@/views/ExerciseSelection.vue')
+    },
+    {
+        path: '/exam_practice',
+        name: 'Practice',
+        component: () => import('@/views/ExercisePractice.vue')
+    },
+    {
         path: '/exam/result',
         name: 'ExamResult',
         component: () => import('@/views/ExamResult.vue')

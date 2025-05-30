@@ -73,13 +73,17 @@ export default defineComponent({
     // 加载数据
     const loadData = async () => {
       try {
+        const currentPage = 1 // 前端显示的页码
+        const pageSize = 10
+
         const res = await QuestionAnalysisApi.getQuestionAccuracy(
             props.subject,
             props.questionType,
-            1,
-            10,
+            currentPage - 1, // 👈 关键
+            pageSize,
             true
         )
+
 
         updateChart(res.data.content)
       } catch (error) {
