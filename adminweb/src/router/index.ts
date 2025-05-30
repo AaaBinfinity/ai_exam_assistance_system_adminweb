@@ -6,7 +6,7 @@ const routes: RouteRecordRaw[] = [
         path: '/',
         name: 'Home',
         component: () => import('@/views/Home.vue'),  // 懒加载组件
-        meta: { requiresAuth: true },  // 设置这个页面需要身份验证
+        meta: { requiresAuth: true },
     },
     {
         path: '/login',
@@ -36,16 +36,25 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/Dashboard.vue'),
     },
     {
-        path: '/exercise_manager',
-        name: 'ExerciseManager',
-        component: () => import('@/views/ExerciseManager.vue'),
+        path: '/exam/setup',
+        name: 'ExamSetup',
+        component: () => import('@/views/ExamSetup.vue')
     },
+    {
+        path: '/exam/start',
+        name: 'ExamPage',
+        component: () => import('@/views/ExamPage.vue'),
+        meta: {
+            hideNavbar: true  // ✅ 不显示导航栏
+        }
+    }
+
 
 ];
 
 const router = createRouter({
     history: createWebHistory(),
-    routes,  // 确保这里传递的是一个数组
+    routes,
 });
 
 // 路由守卫：检查是否有 token

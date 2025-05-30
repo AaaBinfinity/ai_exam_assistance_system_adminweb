@@ -16,6 +16,7 @@ const logoUrl = import.meta.env.VITE_LOGO_URL || '/logo.png';
         <NavItem to="/dashboard" label="数据面板" />
         <NavItem to="/users_manager" label="用户管理" exact />
         <NavItem to="/exercise_manager" label="题库管理" exact />
+        <NavItem to="/exam/setup" label="考试界面" exact />
       </nav>
     </div>
 
