@@ -41,7 +41,7 @@ export default defineComponent({
         },
         grid: {
           left: '3%',
-          right: '4%',
+          right: '15%',
           bottom: '3%',
           containLabel: true
         },
@@ -81,7 +81,7 @@ export default defineComponent({
             props.questionType,
             currentPage - 1, // 👈 关键
             pageSize,
-            true
+            false
         )
 
 

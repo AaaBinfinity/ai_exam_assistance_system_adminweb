@@ -41,7 +41,7 @@ export default defineComponent({
         },
         grid: {
           left: '3%',
-          right: '4%',
+          right: '10%',
           bottom: '3%',
           containLabel: true
         },
@@ -73,14 +73,16 @@ export default defineComponent({
     // 加载数据
     const loadData = async () => {
       try {
+        const page = 1;
         const res = await QuestionAnalysisApi.getQuestionAvgDuration(
             props.subject,
             props.questionType,
-            1,
+            page - 1,
             10,
             true
         )
-
+        console.log("getQuestionAvgDuration:::::")
+        console.log(res)
         updateChart(res.data.content)
       } catch (error) {
         console.error('加载平均用时数据失败:', error)

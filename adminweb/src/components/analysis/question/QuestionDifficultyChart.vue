@@ -25,90 +25,90 @@ export default defineComponent({
     const chartRef = ref<HTMLElement | null>(null)
     let chartInstance: echarts.ECharts | null = null
 
-    // 初始化图表
     const initChart = () => {
       if (!chartRef.value) return
-
       chartInstance = echarts.init(chartRef.value)
 
       const option = {
-        title: { text: '题目难度分布' },
+        title: {
+          text: '题目难度分布',
+          left: 'center',
+          top: 10,
+          textStyle: {
+            fontSize: 14
+          }
+        },
         tooltip: {
-          trigger: 'axis',
-          axisPointer: {
-            type: 'shadow'
-          }
+          trigger: 'item',
+          formatter: '{b}: {c} ({d}%)'
         },
-        grid: {
-          left: '3%',
-          right: '4%',
-          bottom: '3%',
-          containLabel: true
+        legend: {
+          orient: 'horizontal',
+          bottom: 0,
+          data: ['难度1', '难度2', '难度3', '难度4', '难度5']
         },
-        xAxis: {
-          type: 'category',
-          data: ['难度1', '难度2', '难度3', '难度4'],
-          axisLabel: {
-            interval: 0
-          }
-        },
-        yAxis: { type: 'value', name: '数量' },
-        series: [{
-          type: 'bar',
-          data: [],
-          itemStyle: {
-            color: function(params: any) {
-              const colors = ['#67C23A', '#409EFF', '#E6A23C', '#F56C6C']
-              return colors[params.dataIndex]
+        series: [
+          {
+            name: '难度分布',
+            type: 'pie',
+            radius: ['40%', '65%'],
+            center: ['50%', '50%'],
+            data: [],
+            label: {
+              formatter: '{b}: {c} ({d}%)',
+              fontSize: 12
+            },
+            emphasis: {
+              itemStyle: {
+                shadowBlur: 8,
+                shadowOffsetX: 0,
+                shadowColor: 'rgba(0, 0, 0, 0.3)'
+              }
             }
-          },
-          label: {
-            show: true,
-            position: 'top'
           }
-        }]
+        ]
       }
 
       chartInstance.setOption(option)
     }
 
-    // 加载数据
     const loadData = async () => {
       try {
+        const page = 1
         const res = await QuestionAnalysisApi.getQuestionDifficultyLevel(
             props.subject,
             props.questionType,
-            1,
-            100,
+            page - 1,
+            1000,
             false
         )
-
         updateChart(res.data.content)
       } catch (error) {
         console.error('加载难度数据失败:', error)
       }
     }
 
-    // 更新图表
     const updateChart = (data: any[]) => {
       if (!chartInstance) return
 
-      // 统计各难度级别的题目数量
-      const difficultyCount = [0, 0, 0, 0]
+      const difficultyCount = [0, 0, 0, 0, 0]
       data.forEach(item => {
-        if (item.difficultyLevel >= 1 && item.difficultyLevel <= 4) {
-          difficultyCount[item.difficultyLevel - 1]++
+        const level = item.difficultyLevel
+        if (level >= 1 && level <= 5) {
+          difficultyCount[level - 1]++
         }
       })
 
+      const chartData = difficultyCount.map((count, index) => ({
+        value: count,
+        name: `难度${index + 1}`
+      }))
+
       chartInstance.setOption({
-        series: [{
-          data: difficultyCount
-        }]
+        series: [{ data: chartData }]
       })
     }
 
-    // 窗口大小变化时重新调整图表大小
     const handleResize = () => {
       chartInstance?.resize()
     }
@@ -119,7 +119,6 @@ export default defineComponent({
       window.addEventListener('resize', handleResize)
     })
 
-    // 监听props变化
     watch(() => [props.subject, props.questionType], () => {
       loadData()
     })
@@ -133,11 +132,10 @@ export default defineComponent({
 
 <style scoped>
 .chart-card {
-  height: 400px;
+  height: 500px;
 }
-
 .chart {
   width: 100%;
-  height: 350px;
+  height: 380px;
 }
 </style>

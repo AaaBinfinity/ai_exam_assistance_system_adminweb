@@ -41,7 +41,7 @@ export default defineComponent({
         },
         grid: {
           left: '3%',
-          right: '4%',
+          right: '10%',
           bottom: '3%',
           containLabel: true
         },
@@ -70,12 +70,13 @@ export default defineComponent({
     }
 
     // 加载数据
+    const page = 1;
     const loadData = async () => {
       try {
         const res = await QuestionAnalysisApi.getQuestionEfficiency(
             props.subject,
             props.questionType,
-            1,
+            page - 1,
             10,
             true
         )
