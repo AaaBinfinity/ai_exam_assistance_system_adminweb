@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard-page">
-    <h2>试题分析</h2>
+    <h3>习题分析</h3>
     <question-analysis />
   </div>
 </template>

@@ -170,24 +170,65 @@ export default defineComponent({
 })
 </script>
 
-
 <style scoped>
 .question-analysis-container {
+  padding: 24px;
+  background-color: #f5f7fa;
+}
+
+/* 卡片容器样式优化 */
+.filter-card {
+  margin-bottom: 24px;
+  border-radius: 10px;
   padding: 20px;
 }
 
-.filter-card {
-  margin-bottom: 20px;
-}
-
+/* 表单容器样式优化 */
 .filter-form {
+  max-width: 800px;
+  margin: 0 auto;
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  align-items: center;
+  gap: 24px;
+  justify-content: space-between;
 }
 
-.chart-row {
-  margin-bottom: 20px;
+/* 表单项宽度调整 */
+.filter-form .el-form-item {
+  flex: 1 1 200px;
+  min-width: 100px;
 }
+
+/* 图表行外边距 */
+.chart-row {
+  margin-bottom: 24px;
+}
+
+/* 卡片样式统一 */
+.el-card {
+  border-radius: 10px;
+  height: 100%;
+  transition: all 0.3s ease;
+}
+
+.el-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 图表高度统一 */
+.el-col > * {
+  height: 100%;
+}
+
+/* 图表容器填满空间 */
+.chart-row .el-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: stretch;
+}
+
+
+
 </style>
+
